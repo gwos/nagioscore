@@ -234,6 +234,14 @@ static long long check_file_size(char *, unsigned long, struct rlimit);
 
 notification    *notification_list;
 
+// We will use either check_result_list for a single-linked list, or the pair
+// check_result_list_head and check_result_list_tail for a double-linked list.
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+check_result    *check_result_list_head = NULL;
+check_result    *check_result_list_tail = NULL;
+#else
+check_result    *check_result_list = NULL;
+#endif
 time_t max_check_result_file_age;
 
 check_stats     check_statistics[MAX_CHECK_STATS_TYPES];
@@ -248,10 +256,17 @@ squeue_t *nagios_squeue = NULL; /* our scheduling queue */
 
 sched_info scheduling_info;
 
+#ifdef USE_EVENT_BROKER
+pthread_mutex_t check_result_list_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 /* from GNU defines errno as a macro, since it's a per-thread variable */
 #ifndef errno
 extern int errno;
 #endif
+
+/* Establish that this patch is in place. */
+char check_result_list_patch_ident[] = "$CheckResultListPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 
 /* Initialize the non-shared main configuration variables */
@@ -2166,6 +2181,207 @@ int drop_privileges(char *user, char *group) {
 /************************* IPC FUNCTIONS **************************/
 /******************************************************************/
 
+/* move check result to queue directory */
+int move_check_result_to_queue(char *checkresult_file) {
+	char *output_file = NULL;
+	char *temp_buffer = NULL;
+	int output_file_fd = -1;
+	mode_t new_umask = 077;
+	mode_t old_umask;
+	int result = 0;
+
+	/* save the file creation mask */
+	old_umask = umask(new_umask);
+
+	/* create a safe temp file */
+	asprintf(&output_file, "%s/cXXXXXX", check_result_path);
+	output_file_fd = mkstemp(output_file);
+
+	/* file created okay */
+	if(output_file_fd >= 0) {
+
+		log_debug_info(DEBUGL_CHECKS, 2, "Moving temp check result file '%s' to queue file '%s'...\n", checkresult_file, output_file);
+
+#ifdef __CYGWIN__
+		/* Cygwin cannot rename open files - gives Permission Denied */
+		/* close the file */
+		close(output_file_fd);
+#endif
+
+		/* move the original file */
+		result = my_rename(checkresult_file, output_file);
+
+#ifndef __CYGWIN__
+		/* close the file */
+		close(output_file_fd);
+#endif
+
+		/* create an ok-to-go indicator file */
+		asprintf(&temp_buffer, "%s.ok", output_file);
+		if((output_file_fd = open(temp_buffer, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR)) >= 0)
+			close(output_file_fd);
+		my_free(temp_buffer);
+
+		/* delete the original file if it couldn't be moved */
+		if(result != 0)
+			unlink(checkresult_file);
+		}
+	else
+		result = -1;
+
+	/* reset the file creation mask */
+	umask(old_umask);
+
+	/* log a warning on errors */
+	if(result != 0)
+		logit(NSLOG_RUNTIME_WARNING, TRUE, "Warning: Unable to move file '%s' to check results queue.\n", checkresult_file);
+
+	/* free memory */
+	my_free(output_file);
+
+	return OK;
+	}
+
+
+
+/* save all host and service checks currently queued in the check result list to an external file */
+void save_queued_check_results(void) {
+	check_result *temp_cr = NULL;
+	check_result *this_cr = NULL;
+	check_result *next_cr = NULL;
+	char *checkresult_file = NULL;
+	int checkresult_file_fd = -1;
+	FILE *checkresult_file_fp = NULL;
+	mode_t new_umask = 077;
+	mode_t old_umask;
+	time_t current_time;
+
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "save_queued_check_results()\n");
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	/* nothing to do */
+	if
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+	    (check_result_list_head == NULL)
+#else
+	    (check_result_list == NULL)
+#endif
+		{
+#ifdef USE_EVENT_BROKER
+		/* Relinquish the check result list mutex */
+		pthread_mutex_unlock(&check_result_list_lock);
+#endif
+		return;
+		}
+
+	log_debug_info(DEBUGL_CHECKS, 1, "Saving host/service check results obtained from the check result queue ...\n");
+
+	/* open a temp file for storing check result(s) */
+	old_umask = umask(new_umask);
+	asprintf(&checkresult_file, "%s/checkXXXXXX", temp_path);
+	checkresult_file_fd = mkstemp(checkresult_file);
+	umask(old_umask);
+	if(checkresult_file_fd < 0) {
+		logit(NSLOG_RUNTIME_ERROR, TRUE, "Failed to open checkresult file '%s': %s\n", checkresult_file, strerror(errno));
+		free(checkresult_file);
+#ifdef USE_EVENT_BROKER
+		/* Relinquish the check result list mutex */
+		pthread_mutex_unlock(&check_result_list_lock);
+#endif
+		return;
+		}
+
+	checkresult_file_fp = fdopen(checkresult_file_fd, "w");
+
+	time(&current_time);
+	fprintf(checkresult_file_fp, "### Passive Check Result File ###\n");
+	fprintf(checkresult_file_fp, "# Time: %s", ctime(&current_time));
+	fprintf(checkresult_file_fp, "file_time=%lu\n", (unsigned long)current_time);
+	fprintf(checkresult_file_fp, "\n");
+
+	log_debug_info(DEBUGL_CHECKS | DEBUGL_IPC, 1, "Passive check result(s) will be written to '%s' (fd=%d)\n", checkresult_file, checkresult_file_fd);
+
+	/* write check results to file */
+	if(checkresult_file_fp) {
+
+		/* write all service checks to check result queue file for later processing */
+		for(
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+		    temp_cr = check_result_list_head;
+#else
+		    temp_cr = check_result_list;
+#endif
+		    temp_cr != NULL; temp_cr = temp_cr->next) {
+
+			fprintf(checkresult_file_fp, "### Nagios %s Check Result ###\n", (temp_cr->object_check_type == SERVICE_CHECK) ? "Service" : "Host");
+			fprintf(checkresult_file_fp, "# Time: %s", ctime(&temp_cr->start_time.tv_sec));
+			fprintf(checkresult_file_fp, "host_name=%s\n", (temp_cr->host_name == NULL) ? "" : temp_cr->host_name);
+			if(temp_cr->object_check_type == SERVICE_CHECK)
+				fprintf(checkresult_file_fp, "service_description=%s\n", (temp_cr->service_description == NULL) ? "" : temp_cr->service_description);
+			fprintf(checkresult_file_fp, "check_type=%d\n", temp_cr->check_type);
+			fprintf(checkresult_file_fp, "check_options=%d\n", temp_cr->check_options);
+			fprintf(checkresult_file_fp, "scheduled_check=%d\n", temp_cr->scheduled_check);
+			fprintf(checkresult_file_fp, "reschedule_check=%d\n", temp_cr->reschedule_check);
+			fprintf(checkresult_file_fp, "latency=%f\n", temp_cr->latency);
+			fprintf(checkresult_file_fp, "start_time=%lu.%lu\n", temp_cr->start_time.tv_sec, temp_cr->start_time.tv_usec);
+			fprintf(checkresult_file_fp, "finish_time=%lu.%lu\n", temp_cr->finish_time.tv_sec, temp_cr->finish_time.tv_usec);
+			fprintf(checkresult_file_fp, "early_timeout=%d\n", temp_cr->early_timeout);
+			fprintf(checkresult_file_fp, "exited_ok=%d\n", temp_cr->exited_ok);
+			fprintf(checkresult_file_fp, "return_code=%d\n", temp_cr->return_code);
+
+			/* newlines and backslashes in output are not escaped in temp_cr->output, but must be in the file */
+			char *escaped_output = escape_newlines(temp_cr->output);
+			fprintf(checkresult_file_fp, "output=%s\n", (escaped_output == NULL) ? "" : escaped_output);
+			my_free(escaped_output);
+
+			fprintf(checkresult_file_fp, "\n");
+			}
+		}
+
+	/* close the temp file */
+	fclose(checkresult_file_fp);
+
+	/* move check result to queue directory */
+	move_check_result_to_queue(checkresult_file);
+
+	/* free memory */
+	my_free(checkresult_file);
+
+	/* free memory for the passive check result list */
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+	this_cr = check_result_list_head;
+#else
+	this_cr = check_result_list;
+#endif
+	while(this_cr != NULL) {
+		next_cr = this_cr->next;
+		my_free(this_cr->host_name);
+		my_free(this_cr->service_description);
+		my_free(this_cr->output);
+		my_free(this_cr);
+		this_cr = next_cr;
+		}
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+	check_result_list_head = NULL;
+	check_result_list_tail = NULL;
+#else
+	check_result_list = NULL;
+#endif
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return;
+	}
+
+
+
 /* processes files in the check result queue directory */
 int process_check_result_queue(char *dirname) {
 	char file[MAX_FILENAME_LENGTH];
@@ -2544,6 +2760,62 @@ int delete_check_result_file(char *fname)
 
 
 
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+/* reads the first host/service check result from the list in memory */
+check_result *read_check_result_double_list(void) {
+	check_result *first_cr = NULL;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	if(check_result_list_head != NULL) {
+		first_cr = check_result_list_head;
+		check_result_list_head = check_result_list_head->next;
+		if(check_result_list_head == NULL) {
+			check_result_list_tail = NULL;
+			}
+		else {
+			check_result_list_head->prev = NULL;
+			}
+		}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return first_cr;
+	}
+#endif
+
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+/* reads the first host/service check result from the list in memory */
+check_result *read_check_result(check_result **listp) {
+	check_result *first_cr = NULL;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	if(*listp != NULL) {
+		first_cr = *listp;
+		*listp = (*listp)->next;
+		}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return first_cr;
+	}
+#endif
+
+
+
 /* initializes a host/service check result */
 int init_check_result(check_result *info)
 {
@@ -2574,6 +2846,192 @@ int init_check_result(check_result *info)
 
 	return OK;
 }
+
+
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+/* adds a new host/service check result to the list in memory */
+int add_check_result_to_double_list(check_result *new_cr) {
+	check_result *temp_cr = NULL;
+	check_result *last_cr = NULL;
+
+	if(new_cr == NULL)
+		return ERROR;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	/* add to list, sorted by finish time (ascending) */
+	/* equal elements are added at the end of the sublist of equal elements */
+
+	/* find insertion point */
+	for(temp_cr = check_result_list_tail; temp_cr != NULL; temp_cr = temp_cr->prev) {
+		if(temp_cr->finish_time.tv_sec <= new_cr->finish_time.tv_sec) {
+			if(temp_cr->finish_time.tv_sec < new_cr->finish_time.tv_sec)
+				break;
+			else if(temp_cr->finish_time.tv_usec <= new_cr->finish_time.tv_usec)
+				break;
+			}
+		last_cr = temp_cr;
+		}
+
+	/* item goes at tail of list */
+	if(check_result_list_tail == NULL || temp_cr == check_result_list_tail) {
+		new_cr->prev = check_result_list_tail;
+		new_cr->next = NULL;
+		if(check_result_list_tail == NULL) {
+			check_result_list_head = new_cr;
+			}
+		else {
+			check_result_list_tail->next = new_cr;
+			}
+		check_result_list_tail = new_cr;
+		}
+
+	/* item goes at head of list */
+	else if(temp_cr == NULL) {
+		new_cr->prev = NULL;
+		new_cr->next = check_result_list_head;
+		if(check_result_list_head == NULL) {
+			check_result_list_tail = new_cr;
+			}
+		else {
+			check_result_list_head->prev = new_cr;
+			}
+		check_result_list_head = new_cr;
+		}
+
+	/* item goes in middle of list */
+	else {
+		new_cr->prev = temp_cr;
+		temp_cr->next = new_cr;
+		new_cr->next = last_cr;
+		last_cr->prev = new_cr;
+		}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return OK;
+	}
+#endif
+
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+/* adds a new host/service check result to the list in memory */
+int add_check_result_to_list(check_result **listp, check_result *new_cr) {
+	check_result *temp_cr = NULL;
+	check_result *last_cr = NULL;
+
+	if(new_cr == NULL)
+		return ERROR;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	/* add to list, sorted by finish time (ascending) */
+	/* equal elements are added at the end of the sublist of equal elements */
+
+	/* find insertion point */
+	last_cr = *listp;
+	for(temp_cr = *listp; temp_cr != NULL; temp_cr = temp_cr->next) {
+		if(temp_cr->finish_time.tv_sec >= new_cr->finish_time.tv_sec) {
+			if(temp_cr->finish_time.tv_sec > new_cr->finish_time.tv_sec)
+				break;
+			else if(temp_cr->finish_time.tv_usec > new_cr->finish_time.tv_usec)
+				break;
+			}
+		last_cr = temp_cr;
+		}
+
+	/* item goes at head of list */
+	if(*listp == NULL || temp_cr == *listp) {
+		new_cr->next = *listp;
+		*listp = new_cr;
+		}
+
+	/* item goes in middle or at end of list */
+	else {
+		new_cr->next = temp_cr;
+		last_cr->next = new_cr;
+		}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return OK;
+	}
+#endif
+
+
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+/* frees all memory associated with the check result list */
+int free_check_result_double_list(void){
+	check_result *this_cr=NULL;
+	check_result *next_cr=NULL;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	for(this_cr=check_result_list_head;this_cr!=NULL;this_cr=next_cr){
+		next_cr=this_cr->next;
+		free_check_result(this_cr);
+		my_free(this_cr);
+		}
+
+	check_result_list_head=NULL;
+	check_result_list_tail=NULL;
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return OK;
+	}
+
+#define FREE_ALL_CHECK_RESULTS(dummy_check_result_list_ptr) free_check_result_double_list()
+#endif
+
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+/* frees all memory associated with the check result list */
+int free_check_result_list(check_result **listp) {
+	check_result *this_cr = NULL;
+	check_result *next_cr = NULL;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	for(this_cr = *listp; this_cr != NULL; this_cr = next_cr) {
+		next_cr = this_cr->next;
+		free_check_result(this_cr);
+		my_free(this_cr);
+		}
+
+	*listp = NULL;
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return OK;
+	}
+
+#define FREE_ALL_CHECK_RESULTS(check_result_list_ptr) free_check_result_list(check_result_list_ptr)
+#endif
 
 
 
@@ -3497,6 +3955,9 @@ void free_memory(nagios_macros *mac) {
 	/* free all allocated memory for the object definitions */
 	free_object_data();
 	free_comment_data();
+
+	/* free check result list */
+	FREE_ALL_CHECK_RESULTS(&check_result_list);
 
 	/* free event queue data */
 	squeue_destroy(nagios_squeue, SQUEUE_FREE_DATA);
