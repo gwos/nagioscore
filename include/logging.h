@@ -70,6 +70,7 @@ void logit(int, int, const char *, ...)
 __attribute__((__format__(__printf__, 3, 4)));
 int log_debug_info(int, int, const char *, ...)
 __attribute__((__format__(__printf__, 3, 4)));
+void write_to_logs_and_console(char *,unsigned long,int);	/* writes a string to screen and logs */
 
 #ifndef NSCGI
 int write_to_all_logs(char *, unsigned long);           /* writes a string to main log file and syslog facility */
