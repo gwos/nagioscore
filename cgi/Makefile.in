@@ -40,7 +40,7 @@ JSONFLAGS=-DJSON_NAGIOS_4X
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
 
-CGIS=archivejson.cgi avail.cgi cmd.cgi config.cgi extinfo.cgi history.cgi notifications.cgi objectjson.cgi outages.cgi showlog.cgi status.cgi statusjson.cgi statuswml.cgi summary.cgi tac.cgi $(CGIEXTRAS)
+CGIS=archivejson.cgi avail.cgi cmd.cgi config.cgi extinfo.cgi history.cgi notifications.cgi objectjson.cgi outages.cgi showlog.cgi status.cgi statusjson.cgi statuswml.cgi statuswml2.cgi summary.cgi tac.cgi $(CGIEXTRAS)
 
 # Object functions
 ODATALIBS=objects-cgi.o xobjects-cgi.o
@@ -143,6 +143,9 @@ status.cgi: status.c $(CGIDEPS) $(CDATADEPS)
 
 statuswml.cgi: statuswml.c $(CGIDEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ statuswml.c $(CGILIBS) $(LIBS)
+
+statuswml2.cgi: statuswml2.c $(CGIDEPS)
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ statuswml2.c $(CGILIBS) $(LIBS)
 
 statusmap.cgi: statusmap.c $(CGIDEPS)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ statusmap.c $(CGILIBS) $(GDLIBS) $(LIBS)
