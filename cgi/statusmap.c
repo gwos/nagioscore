@@ -222,9 +222,8 @@ struct layer *layer_list = NULL;
 int exclude_layers = TRUE;
 int all_layers = FALSE;
 
-
-
-
+/* Establish that this patch is in place. */
+char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 int main(int argc, char **argv) {
 	int result;
@@ -315,7 +314,7 @@ void document_header(int use_stylesheet) {
 	if(create_type == CREATE_HTML) {
 		printf("Cache-Control: no-store\r\n");
 		printf("Pragma: no-cache\r\n");
-		printf("Refresh: %d\r\n", refresh_rate);
+		// printf("Refresh: %d\r\n", refresh_rate);
 
 		time(&current_time);
 		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
@@ -347,7 +346,8 @@ void document_header(int use_stylesheet) {
 
 		printf("</head>\n");
 
-		printf("<body CLASS='statusmap' name='mappage' id='mappage'>\n");
+		printf("<body CLASS='statusmap' name='mappage' id='mappage'"
+		       " onload='setTimeout(\"location=self.location;\",%d)'>\n", (refresh_rate ? refresh_rate : 1000000) * 1000);
 
 		/* include user SSI header */
 #ifdef LEGACY_GRAPHICAL_CGIS
