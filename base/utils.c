@@ -242,6 +242,11 @@ check_result    *check_result_list_tail = NULL;
 #else
 check_result    *check_result_list = NULL;
 #endif
+int check_result_list_length = 0;
+intmax_t check_result_list_ingress_count = 0;
+intmax_t check_result_list_egress_count  = 0;
+intmax_t clock_tick_nanoseconds;
+struct timespec check_result_list_count_start_time;
 time_t max_check_result_file_age;
 
 check_stats     check_statistics[MAX_CHECK_STATS_TYPES];
@@ -267,6 +272,9 @@ extern int errno;
 
 /* Establish that this patch is in place. */
 char check_result_list_patch_ident[] = "$CheckResultListPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
+/* Establish that this patch is in place. */
+char check_patch_ident[] = "$CheckPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 
 /* Initialize the non-shared main configuration variables */
@@ -444,6 +452,22 @@ void init_main_cfg_vars(int first_time) {
 
 	ocsp_command = NULL;
 	ochp_command = NULL;
+
+	if(first_time) {
+		check_result_list_ingress_count = 0;
+		check_result_list_egress_count  = 0;
+
+		// Presently, we ignore the possibility that CLOCK_MONOTONIC_RAW might not be supported on
+		// a given platform.  Sufficiently-recent Linux kernels should be just fine in that regard.
+
+		struct timespec one_clock_tick;
+		clock_getres(CLOCK_MONOTONIC_RAW, &one_clock_tick);
+		clock_tick_nanoseconds = one_clock_tick.tv_sec * (intmax_t) NANOSECONDS_PER_SECOND + one_clock_tick.tv_nsec;
+
+		struct timespec now;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+		check_result_list_count_start_time = now;
+	}
 
 	return;
 	}
@@ -1604,6 +1628,7 @@ time_t get_next_log_rotation_time(void) {
 	struct tm *t, tm_s;
 	int is_dst_now = FALSE;
 	time_t run_time;
+	int expected_mday;
 
 	time(&current_time);
 	t = localtime_r(&current_time, &tm_s);
@@ -2367,8 +2392,10 @@ void save_queued_check_results(void) {
 #ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
 	check_result_list_head = NULL;
 	check_result_list_tail = NULL;
+	check_result_list_length = 0;
 #else
 	check_result_list = NULL;
+	check_result_list_length = 0;
 #endif
 
 #ifdef USE_EVENT_BROKER
@@ -2778,6 +2805,8 @@ check_result *read_check_result_double_list(void) {
 		else {
 			check_result_list_head->prev = NULL;
 			}
+		--check_result_list_length;
+		++check_result_list_egress_count;
 		}
 
 #ifdef USE_EVENT_BROKER
@@ -2802,6 +2831,8 @@ check_result *read_check_result(check_result **listp) {
 	if(*listp != NULL) {
 		first_cr = *listp;
 		*listp = (*listp)->next;
+		--check_result_list_length;
+		++check_result_list_egress_count;
 		}
 
 #ifdef USE_EVENT_BROKER
@@ -2910,6 +2941,9 @@ int add_check_result_to_double_list(check_result *new_cr) {
 		last_cr->prev = new_cr;
 		}
 
+	++check_result_list_length;
+	++check_result_list_ingress_count;
+
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
 	pthread_mutex_unlock(&check_result_list_lock);
@@ -2960,6 +2994,9 @@ int add_check_result_to_list(check_result **listp, check_result *new_cr) {
 		last_cr->next = new_cr;
 		}
 
+	++check_result_list_length;
+	++check_result_list_ingress_count;
+
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
 	pthread_mutex_unlock(&check_result_list_lock);
@@ -2990,6 +3027,7 @@ int free_check_result_double_list(void){
 
 	check_result_list_head=NULL;
 	check_result_list_tail=NULL;
+	check_result_list_length = 0;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
@@ -3020,6 +3058,7 @@ int free_check_result_list(check_result **listp) {
 		}
 
 	*listp = NULL;
+	check_result_list_length = 0;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
@@ -3047,6 +3086,170 @@ int free_check_result(check_result *info)
 
 	return OK;
 }
+
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_stats get_check_result_double_list_statistics()
+{
+	struct check_result_list_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		check_result_list_statistics.first_item_finish_time = check_result_list_head->finish_time;
+		check_result_list_statistics. last_item_finish_time = check_result_list_tail->finish_time;
+	}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
+
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_stats get_check_result_list_statistics(check_result **listp)
+{
+	struct check_result_list_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		// We have in hand only a pointer to the head of the list.
+		//
+		// We are not about to spend a lot of time walking the entire list to find the tail,
+		// just to retrieve this one piece of information.  That would cause O(n) behavior
+		// in retrieving statistics when we really want just O(1) behavior.  Therefore, we
+		// fake it by simply replicating the timestamp of the item at the head of the list,
+		// which is the more important (oldest-timestamp) value anyway.  We accept that as
+		// a practical limitation of operating with only a single-linked list.
+		check_result_list_statistics.first_item_finish_time = (*listp)->finish_time;
+		check_result_list_statistics. last_item_finish_time = (*listp)->finish_time;
+	}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_full_stats get_check_result_double_list_full_statistics()
+{
+	struct check_result_list_full_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		check_result_list_statistics.first_item_finish_time = check_result_list_head->finish_time;
+		check_result_list_statistics. last_item_finish_time = check_result_list_tail->finish_time;
+	}
+
+	check_result_list_statistics.ingress_count = check_result_list_ingress_count;
+	check_result_list_statistics. egress_count = check_result_list_egress_count;
+
+	// We would have preferred to obtain the time using gethrtime(), as is available on
+	// Solaris and HP-UX.  That provides the raw timestamp directly as a 64-bit integer,
+	// expressed in nanoseconds.  As such, it would be much more efficient to compute
+	// with.  But Linux does not provide that call, so we have to make do with what we
+	// have available.  For more on accurate timing, see:
+	// https://www.circonus.com/2016/09/time-but-faster/
+	// https://github.com/circonus-labs/libmtev
+	// https://github.com/circonus-labs/libmtev/blob/master/src/utils/mtev_time.c
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+	check_result_list_statistics.counts_duration_nanoseconds =
+		(now.tv_sec  - check_result_list_count_start_time.tv_sec) * (intmax_t) NANOSECONDS_PER_SECOND +
+		(now.tv_nsec - check_result_list_count_start_time.tv_nsec);
+	// The clock we probe might not actually have nanosecond resolution.  So we graciously prevent
+	// downstream divide-by-zero errors, and don't use an inaccurate zero time when such a division is
+	// inverted, even though the results in either case are likely to be off from their true values.
+	if (check_result_list_statistics.counts_duration_nanoseconds == 0) {
+		check_result_list_statistics.counts_duration_nanoseconds = clock_tick_nanoseconds;
+	}
+
+	// The next time we return counts, they will only be incremental from this point.
+	check_result_list_ingress_count = 0;
+	check_result_list_egress_count  = 0;
+	check_result_list_count_start_time = now;
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
+
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_full_stats get_check_result_list_full_statistics(check_result **listp)
+{
+	struct check_result_list_full_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		// We have in hand only a pointer to the head of the list.
+		//
+		// We are not about to spend a lot of time walking the entire list to find the tail,
+		// just to retrieve this one piece of information.  That would cause O(n) behavior
+		// in retrieving statistics when we really want just O(1) behavior.  Therefore, we
+		// fake it by simply replicating the timestamp of the item at the head of the list,
+		// which is the more important (oldest-timestamp) value anyway.  We accept that as
+		// a practical limitation of operating with only a single-linked list.
+		check_result_list_statistics.first_item_finish_time = (*listp)->finish_time;
+		check_result_list_statistics. last_item_finish_time = (*listp)->finish_time;
+	}
+
+	check_result_list_statistics.ingress_count = check_result_list_ingress_count;
+	check_result_list_statistics. egress_count = check_result_list_egress_count;
+
+	// See get_check_result_double_list_full_statistics() above for further comments.
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+	check_result_list_statistics.counts_duration_nanoseconds =
+		(now.tv_sec  - check_result_list_count_start_time.tv_sec) * (intmax_t) NANOSECONDS_PER_SECOND +
+		(now.tv_nsec - check_result_list_count_start_time.tv_nsec);
+	if (check_result_list_statistics.counts_duration_nanoseconds == 0) {
+		check_result_list_statistics.counts_duration_nanoseconds = clock_tick_nanoseconds;
+	}
+
+	// The next time we return counts, they will only be incremental from this point.
+	check_result_list_ingress_count = 0;
+	check_result_list_egress_count  = 0;
+	check_result_list_count_start_time = now;
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
 
 
 /******************************************************************/
@@ -3683,242 +3886,9 @@ int generate_check_stats(void) {
 
 /* check for new releases of Nagios */
 int check_for_nagios_updates(int force, int reschedule) {
-	time_t current_time;
 	int result = OK;
-	int api_result = OK;
-	int do_check = TRUE;
-	time_t next_check = 0L;
-	unsigned int rand_seed = 0;
-	int randnum = 0;
-
-	time(&current_time);
-
-	/*
-	printf("NOW: %s",ctime(&current_time));
-	printf("LAST CHECK: %s",ctime(&last_update_check));
-	*/
-
-	/* seed the random generator */
-	rand_seed = (unsigned int)(current_time + nagios_pid);
-	srand(rand_seed);
-
-	/* generate a (probably) unique ID for this nagios install */
-	/* the server api currently sees thousands of nagios installs behind single ip addresses, so this help determine if there are really thousands of servers out there, or if some nagios installs are misbehaving */
-	if(update_uid == 0L)
-		update_uid = current_time;
-
-	/* update checks are disabled */
-	if(check_for_updates == FALSE)
-		do_check = FALSE;
-	/* we checked for updates recently, so don't do it again */
-	if((current_time - last_update_check) < MINIMUM_UPDATE_CHECK_INTERVAL)
-		do_check = FALSE;
-	/* the check is being forced */
-	if(force == TRUE)
-		do_check = TRUE;
-
-	/* do a check */
-	if(do_check == TRUE) {
-
-		/*printf("RUNNING QUERY...\n");*/
-
-		/* query api */
-		api_result = query_update_api();
-		}
-
-	/* should we reschedule the update check? */
-	if(reschedule == TRUE) {
-
-		/*printf("RESCHEDULING...\n");*/
-
-		randnum = rand();
-		/*
-		printf("RAND: %d\n",randnum);
-		printf("RANDMAX: %d\n",RAND_MAX);
-		printf("UCIW: %d\n",UPDATE_CHECK_INTERVAL_WOBBLE);
-		printf("MULT: %f\n",(float)randnum/RAND_MAX);
-		*/
-
-
-
-		/* we didn't do an update, so calculate next possible update time */
-		if(do_check == FALSE) {
-			next_check = last_update_check + BASE_UPDATE_CHECK_INTERVAL;
-			next_check = next_check + (unsigned long)(((float)randnum / RAND_MAX) * UPDATE_CHECK_INTERVAL_WOBBLE);
-			}
-
-		/* we tried to check for an update */
-		else {
-
-			/* api query was okay */
-			if(api_result == OK) {
-				next_check = current_time + BASE_UPDATE_CHECK_INTERVAL;
-				next_check += (unsigned long)(((float)randnum / RAND_MAX) * UPDATE_CHECK_INTERVAL_WOBBLE);
-				}
-
-			/* query resulted in an error - retry at a shorter interval */
-			else {
-				next_check = current_time + BASE_UPDATE_CHECK_RETRY_INTERVAL;
-				next_check += (unsigned long)(((float)randnum / RAND_MAX) * UPDATE_CHECK_RETRY_INTERVAL_WOBBLE);
-				}
-			}
-
-		/* make sure next check isn't in the past - if it is, schedule a check in 1 minute */
-		if(next_check < current_time)
-			next_check = current_time + 60;
-
-		/*printf("NEXT CHECK: %s",ctime(&next_check));*/
-
-		/* schedule the next update event */
-		schedule_new_event(EVENT_CHECK_PROGRAM_UPDATE, TRUE, next_check, FALSE, BASE_UPDATE_CHECK_INTERVAL, NULL, TRUE, NULL, NULL, 0);
-		}
 
 	return result;
-	}
-
-
-
-/* checks for updates at api.nagios.org */
-int query_update_api(void) {
-	const char *api_server = "api.nagios.org";
-	const char *api_path = "/versioncheck/";
-	char *api_query = NULL;
-	char *api_query_opts = NULL;
-	char *buf = NULL;
-	char recv_buf[1024];
-	int report_install = FALSE;
-	char *ptr = NULL;
-	int current_line = 0;
-	int buf_index = 0;
-	int in_header = TRUE;
-	char *var = NULL;
-	char *val = NULL;
-	int sd = 0;
-	int send_len = 0;
-	int recv_len = 0;
-	int update_check_succeeded = FALSE;
-
-	/* report a new install, upgrade, or rollback */
-	/* Nagios monitors the world and we monitor Nagios taking over the world. :-) */
-	if(last_update_check == (time_t)0L)
-		report_install = TRUE;
-	if(last_program_version == NULL || strcmp(PROGRAM_VERSION, last_program_version))
-		report_install = TRUE;
-	if(report_install == TRUE) {
-		asprintf(&api_query_opts, "&firstcheck=1");
-		if(last_program_version != NULL) {
-			char *qopts2 = NULL;
-			asprintf(&qopts2, "%s&last_version=%s", api_query_opts, last_program_version);
-			my_free(api_query_opts);
-			api_query_opts = qopts2;
-			}
-		}
-
-	/* generate the query */
-	asprintf(&api_query, "v=1&product=nagios&tinycheck=1&stableonly=1&uid=%lu", update_uid);
-	if(bare_update_check == FALSE) {
-		char *api_query2 = NULL;
-		asprintf(&api_query2, "%s&version=%s%s", api_query, PROGRAM_VERSION, (api_query_opts == NULL) ? "" : api_query_opts);
-		my_free(api_query);
-		api_query = api_query2;
-		}
-
-	/* generate the HTTP request */
-	asprintf(&buf,
-	         "POST %s HTTP/1.0\r\nUser-Agent: Nagios/%s\r\n"
-	         "Connection: close\r\nHost: %s\r\n"
-	         "Content-Type: application/x-www-form-urlencoded\r\n"
-	         "Content-Length: %lu\r\n\r\n%s",
-	         api_path, PROGRAM_VERSION, api_server,
-	         (unsigned long) strlen(api_query), api_query);
-
-	if (buf == NULL) {
-	  abort();
-	}
-
-#ifdef HAVE_SSL
-	SSL *ssl = NULL;
-	SSL_CTX *ctx = NULL;
-
-	int result = my_ssl_connect(api_server, 443, &sd, &ssl, &ctx, 2);
-	if(sd > 0 && result != ERROR) {
-		/* send request */
-		send_len = strlen(buf);
-		my_ssl_sendall(sd, ssl, buf, &send_len, 2);
-
-		/* get response */
-		recv_len = sizeof(recv_buf);
-		my_ssl_recvall(sd, ssl, recv_buf, &recv_len, 2);
-		recv_buf[sizeof(recv_buf) - 1] = '\x0';
-
-		/* close connection */
-		SSL_free(ssl);
-#if OPENSSL_VERSION_NUMBER < 0x10100000
-		SSL_CTX_free(ctx);
-#endif
-		close(sd);
-#else 
-	my_tcp_connect(api_server, 80, &sd, 2);
-	if(sd > 0) {
-		/* send request */
-		send_len = strlen(buf);
-		my_sendall(sd, buf, &send_len, 2);
-
-		/* get response */
-		recv_len = sizeof(recv_buf);
-		my_recvall(sd, recv_buf, &recv_len, 2);
-		recv_buf[sizeof(recv_buf) - 1] = '\x0';
-
-		/* close connection */
-		close(sd);
-#endif
-		/* parse the result */
-		in_header = TRUE;
-		while((ptr = get_next_string_from_buf(recv_buf, &buf_index, sizeof(recv_buf)))) {
-
-			strip(ptr);
-			current_line++;
-
-			if(!strcmp(ptr, "")) {
-				in_header = FALSE;
-				continue;
-				}
-			if(in_header == TRUE)
-				continue;
-
-			var = strtok(ptr, "=");
-			val = strtok(NULL, "\n");
-
-			if(!strcmp(var, "UPDATE_AVAILABLE")) {
-				update_available = atoi(val);
-				/* we were successful */
-				update_check_succeeded = TRUE;
-				}
-			else if(!strcmp(var, "UPDATE_VERSION")) {
-				if(new_program_version)
-					my_free(new_program_version);
-				new_program_version = strdup(val);
-				}
-			else if(!strcmp(var, "UPDATE_RELEASEDATE")) {
-				}
-			}
-		}
-
-	/* cleanup */
-	my_free(buf);
-	my_free(api_query);
-	my_free(api_query_opts);
-
-	/* we were successful! */
-	if(update_check_succeeded == TRUE) {
-
-		time(&last_update_check);
-		if(last_program_version)
-			free(last_program_version);
-		last_program_version = (char *)strdup(PROGRAM_VERSION);
-		}
-
-	return OK;
 	}
 
 
