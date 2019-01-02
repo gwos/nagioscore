@@ -30,6 +30,7 @@ BINDIR=@bindir@
 CGIDIR=@sbindir@
 LIBEXECDIR=@libexecdir@
 LIBDIR=@libdir@
+TMPDIR=@TMPDIR@
 INCLUDEDIR=@includedir@/nagios
 HTMLDIR=@datadir@
 datarootdir=@datarootdir@
@@ -247,6 +248,7 @@ install-unstripped:
 	$(MAKE) install-basic
 
 install-basic:
+	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(TMPDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LIBEXECDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LOGDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LOGDIR)/archives
@@ -350,8 +352,8 @@ install-daemoninit:
 
 
 install-commandmode:
-	$(INSTALL) -m 775 $(COMMAND_OPTS) -d $(DESTDIR)$(LOGDIR)/rw
-	chmod g+s $(DESTDIR)$(LOGDIR)/rw
+	$(INSTALL) -m 755 $(COMMAND_OPTS) -d $(DESTDIR)$(LOGDIR)/spool
+	chmod g+s $(DESTDIR)$(LOGDIR)/spool
 
 	@echo ""
 	@echo "*** External command directory configured ***"
