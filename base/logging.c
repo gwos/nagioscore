@@ -32,6 +32,9 @@
 static FILE *debug_file_fp;
 static FILE *log_fp;
 
+/* Establish that this patch is in place. */
+char logging_patch_ident[] = "$LoggingPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
 /******************************************************************/
 /************************ LOGGING FUNCTIONS ***********************/
 /******************************************************************/
@@ -45,7 +48,7 @@ static void write_to_console(char *buffer) {
 
 
 /* write something to the log file, syslog, and possibly the console */
-static void write_to_logs_and_console(char *buffer, unsigned long data_type, int display) {
+void write_to_logs_and_console(char *buffer, unsigned long data_type, int display) {
 	register int len = 0;
 	register int x = 0;
 
