@@ -113,6 +113,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 /* needed for the time_t structures we use later... */
 /* this include must come before sys/resource.h or we can have problems on some OSes */

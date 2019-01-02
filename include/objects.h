@@ -173,6 +173,10 @@ typedef struct check_result {
 	struct rusage rusage;   			/* resource usage by this check */
 	struct check_engine *engine;                    /* where did we get this check from? */
 	const void *source;				/* engine handles this */
+	struct check_result *next;			/* added by GroundWork for use with Bronx */
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+	struct check_result *prev;			/* added by GroundWork for use with Bronx */
+#endif
 	} check_result;
 
 
@@ -710,6 +714,150 @@ typedef struct hostdependency {
 	struct host    *dependent_host_ptr;
 	struct timeperiod *dependency_period_ptr;
 	} hostdependency;
+
+// Since Nagios 4 completely dropped support for the check_result_list data structure,
+// we are free to redefine it as we please when we rescuscitate it for use in passing
+// results back from Bronx.  In particular, it used to be a single-linked list.  But
+// now, we could make it completely different, depending on our own evaluation of what
+// would make using it most efficient.
+//
+// In thinking about how this data structure gets used, the basic idea is that Bronx
+// adds elements to the set, and Nagios removes and processes those elements.  For
+// proper effect, Nagios really wants to process the elements in chronological order,
+// by finish_time.  We can either have Bronx compare elements as it inserts them, to
+// keep the data structure continually ordered by finish_time, or we can hava Nagios
+// search for the earliest element as it removes them.  Which is faster?  If we don't
+// sort going in, we're pretty much stuck going out with a full walk of the entire
+// data structure to ensure we really did get the earliest element.  That effectively
+// means O(1) input and O(n^^2) output from the data structure.  (Bronx can make no
+// guarantees that the incoming data it sees arrives in chronological order, since it
+// is receiving data from many independent sources.)  If we sort going in, extracting
+// the earliest element becomes trivial -- O(1) -- and our choice of data structure
+// will control the complexity of adding elements in the right places.
+//
+// The old Nagios 3 code kept this data structure as a single-linked list.  When it
+// wanted to add a new item, it walked the list linearly from the beginning of the list
+// until it found the right location.  Elements were then extracted from the beginning
+// of the list.  But notice something here:  while monotonicity of the finish_time in
+// the incoming stream is not guaranteed, the long-term trend is certainly that later
+// additions will tend to have later timestamps.  Which means that the insertion of
+// each item will generally need to search far into the linked list before finding its
+// final position.  That's just dumb -- you're baking in a process that means that
+// typically, much more than half the list will be searched for every insertion.  So
+// the first improvement we could make would be to either (1) reverse the order of the
+// list to be descending in time, pop from the tail, and still walk from the head for
+// insertions, or (2) keep the order of the list as ascending in time, still pop from
+// the head, but walk from the tail for insertions.  The latter approach is trivial to
+// implement, so that's what we'll do for the first iteration, using a double-linked
+// list so we have access to both ends.  The complexity of insertions will then fall
+// considerably, at least on an absolute basis.  it's obviously at least O(n), but
+// I imagine it might be something approaching O(n * log(n)), given that on an ongoing
+// basis, even though we would be doing a linear search from the tail end, because we
+// generally shouldn't need to search too far back into the list before finding the
+// final resting place for each new item.  Maybe that might make it O(n * sqrt(n)) or
+// somesuch.
+//
+// However, note the following issue, which will affect any dynamically-linked data
+// structure that can end up with elements scattered all over memory.  If we want the
+// best possible performance, we need to consider how the hardware operates in a modern
+// microprocessor.  In particular, hardware caching, pre-fetch, and cache misses can
+// have an enormous effect on performance, good or bad.  The C++ community emphasizes
+// that linked lists are often no longer recommended for simple queues; packed vectors
+// should often be used instead.  All the elements end up right next to each other in
+// memory, making it very fast to access the next member (it's very likely already in
+// the cache, either because of wide-word fetches of whole cache lines or because of
+// automatic speculative data prefetches).  Yes, insertions and deletions can end up
+// copying a lot of data, depending on the size and number of the elements.  But those
+// operations, being linear walks of contiguous data, can often be surprisingly fast.
+// (That said, a single check_result is about 240 bytes, meaning it's huge relative to
+// cache lines.  There are some issues here of trying to keep down the size of each
+// vector element by making it a pointer to a larger payload located elsewhere.  If you
+// do this in the most straightforward manner, with just pointers in the elements, you
+// may well be back to invoking unwanted cache-busting behavior as you still try to
+// access the sort field in each remote item in turn for comparisons.  But you could
+// instead make each element consist of both the pointer to the larger payload and that
+// element's sort field, avoiding the need for remote access by replicating just the
+// critical data in the vector elements.  That would get you both speed and efficiency,
+// at the small cost of managing these extra elements.)
+//
+// Further optimizations are possible, at the cost of some logic complexity.  In any
+// list data structure using a vector as the underlying base, implementation is key to
+// performance.  One could, for example, choose to not re-align the vector on every pop
+// from the start of the list, instead keeping track of the start of the valid range
+// within the vector.  That could save a lot of copying, wherein re-aligning the start
+// of the list would only be invoked if insertions finally bump up against the end and
+// there is space at the start so the whole range of valid data can be shifted down to
+// make space at the end instead.  This takes advantage of the fact that we know in
+// advance the usage pattern is only ever extracting data from the front of the list.
+// Another possible optimization would be to dynamically decide during insertions
+// whether the front or back of the list is shifted over to make room for the new
+// element.  If there is space at the start of the list to accommodate a new element
+// and the front part is shorter than the back part relative to the desired position
+// of the new element, it could be faster to shift the front part and leave the back
+// part in place.  Actual measurements would be needed to establish the performance
+// at various levels of insertion and deletion activity.  Note that the model here in
+// Bronx/Nagios usage of this particular list is that each element gets inserted once
+// and extracted once; there is never any intermediate searching for any given element.
+// That can impact our notion of how to optimize operations on this data structure.
+// Of course, using a vector means you have to allow for vector length extension if
+// the number of elements grows beyond the initial vector allocation.
+//
+// It's possible that some other data structure might do better overall than either
+// a double-linked list or a vector.  For instance, one might consider some sort of
+// balanced tree.  But bear in mind that since we would be unloading the tree always
+// at the very first element, and we would be loading the tree always toward the last
+// element, the overall operational tendency would be to continually drive the tree
+// toward an unbalanced state, requiring frequent and possibly large rebalancing.
+// That would have to be taken account of in comparison to whatever performance
+// improvement we would get by not doing a linear search from the back of a list.
+// One might also consider skiplists or other data structures.  As before, the issue
+// is the cost of structure maintenance.  The only search we do is during insertion,
+// because we only ever pop the first element (by position, not by content); I am
+// assuming that can be done without an expensive search to find that element.  So
+// we don't have repeated searches as an overall weighting factor.  The open question
+// is, would we get enough performance benefit from switching from an estimated
+// O(n * sqrt(n)) overall performance for our double-linked list to the O(n * log(n))
+// performance offered by such complicated data structures?
+//
+// For one final comparison, assuming my unproven but intuitive model of sqrt(n)
+// performance for double-linked-list insertions, here are some ratios to consider:
+//
+//     n     sqrt(n)  log2(n)  sqrt(n) / log2(n)
+//     ====  =======  =======  =================
+//       10   3.1623   2.3026  1.37
+//      100  10.0000   4.6052  2.17
+//      166  12.8840   5.1120  2.52
+//     1000  31.6228   6.9078  4.58
+//
+// So quite possibly, other data structures could be considerably faster.  How much
+// this matters in practice is open to interpretation, as this simple comparison
+// does not take into account larger structure-maintenance costs.  And we would
+// need to figure out where we are on this curve, i.e., at what rate does the data
+// come in and how much accumulates before the data structure gets drained.  For
+// a simple calculation, if we had 1000 hosts each with 10 services, reporting in
+// at 10-minute centers, that would be 10,000 services every 10 minutes, or 1000
+// services per minute, or 166 services on average in each 10-second period between
+// reaping cycles (typical value for check_result_reaper_frequency).  This scales
+// non-linearly with increasing volume, but we don't have absolute timings to check.
+//
+// Since we lived with an even worse complexity (approaching O(n^^2)) in the
+// Nagios-3-era Bronx implementation, I don't see strong pressure right now to spend
+// development time in this area.  We could certainly look at that in the future if
+// Nagios/Bronx performance appears to drag, although there are other issues within
+// Bronx itself (better parallel handling of incoming connections) that deserve our
+// attention first, and that are likely to have a larger overall impact on system
+// reliability.  So for the time being, a double-linked-list it is, with popping
+// from the front end and pushing initiated from the back end.
+//
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+extern check_result *check_result_list;
+#endif
+//
+// For a double-linked list, we don't declare these variables here because no code
+// other than in the file where these variables are defined needs to access them.
+//
+// extern check_result *check_result_list_head;
+// extern check_result *check_result_list_tail;
 
 extern struct command *command_list;
 extern struct timeperiod *timeperiod_list;

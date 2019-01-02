@@ -502,9 +502,23 @@ void adjust_timestamp_for_time_change(time_t, time_t, unsigned long, time_t *); 
 
 
 /**** IPC Functions ****/
+void save_queued_check_results(void);
 int process_check_result_queue(char *);
 int process_check_result_file(char *);
 int process_check_result(check_result *);
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+int add_check_result_to_double_list(check_result *new_cr);
+#define ADD_ONE_CHECK_RESULT(dummy_check_result_list_ptr, check_result_ptr) add_check_result_to_double_list(check_result_ptr)
+check_result *read_check_result_double_list(void);		/* reads a host/service check result from the list in memory */
+#define READ_ONE_CHECK_RESULT(dummy_check_result_list_ptr) read_check_result_double_list()
+#else
+int add_check_result_to_list(check_result **, check_result *);
+#define ADD_ONE_CHECK_RESULT(check_result_list_ptr, check_result_ptr) add_check_result_to_list(check_result_list_ptr, check_result_ptr)
+check_result *read_check_result(check_result **);		/* reads a host/service check result from the list in memory */
+#define READ_ONE_CHECK_RESULT(check_result_list_ptr) read_check_result(check_result_list_ptr)
+#endif
+
 int delete_check_result_file(char *);
 int init_check_result(check_result *);
 int free_check_result(check_result *);                  	/* frees memory associated with a host/service check result */
