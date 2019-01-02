@@ -195,6 +195,9 @@ char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE
 /* Establish that this patch is in place. */
 char no_tour_patch_ident[] = "$NoTourPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
+/* Establish that this patch is in place. */
+char host_alias_patch_ident[] = "$HostAliasPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
 int main(void) {
 
 	char *sound = NULL;
@@ -1577,6 +1580,10 @@ void show_service_detail(void) {
 
 	printf("<th class='status'>Host&nbsp;<a href='%s&sorttype=%d&sortoption=%d'><IMG SRC='%s%s' border=0 ALT='Sort by host name (ascending)' TITLE='Sort by host name (ascending)'></a><a href='%s&sorttype=%d&sortoption=%d'><IMG SRC='%s%s' border=0 ALT='Sort by host name (descending)' TITLE='Sort by host name (descending)'></a></th>", temp_url, SORT_ASCENDING, SORT_HOSTNAME, url_images_path, UP_ARROW_ICON, temp_url, SORT_DESCENDING, SORT_HOSTNAME, url_images_path, DOWN_ARROW_ICON);
 
+	/* CustomAliasAddition */
+	printf("<th class='status'>Alias&nbsp;</th>");
+	/* CustomAliasAddition */
+
 	printf("<th class='status'>Service&nbsp;<a href='%s&sorttype=%d&sortoption=%d'><IMG SRC='%s%s' border=0 ALT='Sort by service name (ascending)' TITLE='Sort by service name (ascending)'></a><a href='%s&sorttype=%d&sortoption=%d'><IMG SRC='%s%s' border=0 ALT='Sort by service name (descending)' TITLE='Sort by service name (descending)'></a></th>", temp_url, SORT_ASCENDING, SORT_SERVICENAME, url_images_path, UP_ARROW_ICON, temp_url, SORT_DESCENDING, SORT_SERVICENAME, url_images_path, DOWN_ARROW_ICON);
 
 	printf("<th class='status'>Status&nbsp;<a href='%s&sorttype=%d&sortoption=%d'><IMG SRC='%s%s' border=0 ALT='Sort by service status (ascending)' TITLE='Sort by service status (ascending)'></a><a href='%s&sorttype=%d&sortoption=%d'><IMG SRC='%s%s' border=0 ALT='Sort by service status (descending)' TITLE='Sort by service status (descending)'></a></th>", temp_url, SORT_ASCENDING, SORT_SERVICESTATUS, url_images_path, UP_ARROW_ICON, temp_url, SORT_DESCENDING, SORT_SERVICESTATUS, url_images_path, DOWN_ARROW_ICON);
@@ -1715,8 +1722,9 @@ void show_service_detail(void) {
 
 			if(new_host == TRUE) {
 				if(strcmp(last_host, "")) {
-					printf("<tr><td colspan='6'></td></tr>\n");
-					printf("<tr><td colspan='6'></td></tr>\n");
+					printf("<tr><td colspan='7'></td></tr>\n");
+					printf("<tr><td colspan='7'></td></tr>\n");
+					/* CustomAliasAddition - Changed colspan from original 6 to new 7 as added alias column */
 					}
 				}
 
@@ -1884,9 +1892,13 @@ void show_service_detail(void) {
 				printf("</td>\n");
 				printf("</tr>\n");
 				printf("</table>\n");
+				/* CustomAliasAddition */
+				printf("</td>\n<td align=left valign=center class='status%s'>%s", host_status_bg_class, temp_host->alias);
+				/* CustomAliasAddition */
 				}
 			else
-				printf("<td>");
+				printf("<td></td><td>");
+				/* CustomAliasAddition - Added end td and start td */
 			printf("</td>\n");
 
 			/* grab macros */
