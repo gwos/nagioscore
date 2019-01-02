@@ -523,6 +523,20 @@ int parse_check_output(char *, char **, char **, char **, int, int);
 int open_command_file(void);					/* creates the external command file as a named pipe (FIFO) and opens it for reading */
 int close_command_file(void);					/* closes and deletes the external command file (FIFO) */
 
+void save_queued_check_results(void);
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+int add_check_result_to_double_list(check_result *new_cr);
+#define ADD_ONE_CHECK_RESULT(dummy_check_result_list_ptr, check_result_ptr) add_check_result_to_double_list(check_result_ptr)
+check_result *read_check_result_double_list(void);		/* reads a host/service check result from the list in memory */
+#define READ_ONE_CHECK_RESULT(dummy_check_result_list_ptr) read_check_result_double_list()
+#else
+int add_check_result_to_list(check_result **, check_result *);
+#define ADD_ONE_CHECK_RESULT(check_result_list_ptr, check_result_ptr) add_check_result_to_list(check_result_list_ptr, check_result_ptr)
+check_result *read_check_result(check_result **);		/* reads a host/service check result from the list in memory */
+#define READ_ONE_CHECK_RESULT(check_result_list_ptr) read_check_result(check_result_list_ptr)
+#endif
+
 
 /**** Monitoring/Event Handler Functions ****/
 int check_service_parents(service *svc);			/* checks service parents */

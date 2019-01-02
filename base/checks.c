@@ -23,6 +23,7 @@
 #include "../include/config.h"
 #include "../include/comments.h"
 #include "../include/common.h"
+#include "../include/objects.h"
 #include "../include/statusdata.h"
 #include "../include/downtime.h"
 #include "../include/macros.h"
@@ -45,16 +46,55 @@
 /******************************************************************/
 
 /* reaps host and service check results */
-int reap_check_results(void)
-{
+int reap_check_results(void) {
+	check_result *queued_check_result = NULL;
+	time_t current_time = 0L;
+	time_t reaper_start_time = 0L;
+	int status;
 	int reaped_checks = 0;
 
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "reap_check_results() start\n");
 
+	/* get the start time */
+	time(&reaper_start_time);
+
 	/* process files in the check result queue */
 	reaped_checks = process_check_result_queue(check_result_path);
 
-	log_debug_info(DEBUGL_FUNCTIONS, 0, "reap_check_results() reaped %d checks end\n", reaped_checks);
+	/* read all check results that have come in... */
+	while((queued_check_result = READ_ONE_CHECK_RESULT(&check_result_list))) {
+
+		reaped_checks++;
+
+		log_debug_info(DEBUGL_CHECKS, 2, "Found a check result (#%d) to handle...\n", reaped_checks);
+
+		// We will get back either OK or ERROR.
+		status = process_check_result(queued_check_result);
+
+		/* free allocated memory */
+		free_check_result(queued_check_result);
+		my_free(queued_check_result);
+
+		if (status != OK) {
+			continue;
+			}
+
+		/* break out if we've been here too long (max_check_reaper_time seconds) */
+		time(&current_time);
+		if((int)(current_time - reaper_start_time) > max_check_reaper_time) {
+			log_debug_info(DEBUGL_CHECKS, 0, "Breaking out of check result reaper: max reaper time exceeded\n");
+			break;
+			}
+
+		/* bail out if we encountered a signal */
+		if(sigshutdown == TRUE || sigrestart == TRUE) {
+			log_debug_info(DEBUGL_CHECKS, 0, "Breaking out of check result reaper: signal encountered\n");
+			break;
+			}
+		}
+
+	log_debug_info(DEBUGL_CHECKS, 0, "Finished reaping %d check results\n", reaped_checks);
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "reap_check_results() end\n");
 
 	return OK;
 }
@@ -2422,6 +2462,16 @@ int handle_async_host_check_result(host *hst, check_result *cr)
         
         hard_state_change = TRUE;
 		send_notification = TRUE;
+	}
+
+	/* neb module wants to override the service check - perhaps it will check the service itself */
+	if (neb_result == NEBERROR_CALLBACKOVERRIDE) {
+		clear_volatile_macros_r(&mac);
+		hst->latency = old_latency;
+		free_check_result(cr);
+		// FIX MINOR:  This looks like a memory leak to me -- don't we need my_free(cr) here as well?  Who free()s the cr?
+		my_free(processed_command);
+		return OK;
 	}
 
 	/* handle some acknowledgement things and update last_state_change */
