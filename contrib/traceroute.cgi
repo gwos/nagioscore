@@ -1,4 +1,4 @@
-#!/usr/bin/perl
+#!/usr/local/groundwork/perl/bin/perl
 #
 # (c)2004 Andreas Wassatsch
 # released under GPLv2
@@ -28,11 +28,11 @@ use POSIX qw(strftime);
 # Global Settings
 #----------------
 $| = 1;
-my($nagios)  = "/usr/local/nagios";
+my($nagios)  = "/usr/local/groundwork/nagios";
 my($urlbase) = "/nagios";
 my($refresh) = 30;
 my($self) = basename($0);
-my($traceroute) = "/usr/sbin/traceroute -m 20 -q 1";
+my($traceroute) = "/usr/bin/traceroute -m 20 -q 1";
 
 # Generate HTTP header
 #---------------------
