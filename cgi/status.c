@@ -192,6 +192,9 @@ int display_header = TRUE;
 /* Establish that this patch is in place. */
 char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
+/* Establish that this patch is in place. */
+char no_tour_patch_ident[] = "$NoTourPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
 int main(void) {
 
 	char *sound = NULL;
