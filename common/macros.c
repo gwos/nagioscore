@@ -1844,7 +1844,7 @@ int grab_standard_host_macro_r(nagios_macros *mac, int macro_type, host *temp_ho
 			*free_macro = TRUE;
 			buf1 = get_url_encoded_string(temp_host->name);
 			if (buf1 != NULL) {
-				asprintf(output, "%s/cgi-bin/extinfo.cgi?type=1&host=%s", 
+				asprintf(output, "%s/extinfo.cgi?type=1&host=%s", 
 					website_url ? website_url : "website_url not set",
 					buf1);
 				free(buf1);
@@ -2194,7 +2194,7 @@ int grab_standard_service_macro_r(nagios_macros *mac, int macro_type, service *t
 			buf2 = get_url_encoded_string(temp_service->description);
 			if (buf1 != NULL) {
 				if (buf2 != NULL) {
-					asprintf(output, "%s/cgi-bin/extinfo.cgi?type=2&host=%s&service=%s", 
+					asprintf(output, "%s/extinfo.cgi?type=2&host=%s&service=%s", 
 						website_url ? website_url : "website_url not set",
 						buf1, buf2);
 					free(buf2);
