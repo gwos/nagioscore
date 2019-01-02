@@ -6905,7 +6905,7 @@ else
 fi
 
 if test "x$CHECKRESULTDIR" = "xno"; then
-	CHECKRESULTDIR="$localstatedir/spool/checkresults"
+	CHECKRESULTDIR="$localstatedir/checkresults"
 fi
 
 
