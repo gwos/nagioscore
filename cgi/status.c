@@ -191,6 +191,9 @@ int display_header = TRUE;
 /* Establish that this patch is in place. */
 char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
+/* Establish that this patch is in place. */
+char no_tour_patch_ident[] = "$NoTourPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
 int main(void) {
 	char *sound = NULL;
 	host *temp_host = NULL;
@@ -536,10 +539,12 @@ void document_header(int use_stylesheet) {
 	printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, NAGFUNCS_JS);
 	/* JS function to append content to elements on page */
 	printf("<script type='text/javascript'>\n");
+    if (0) {
 	printf("var vbox, vBoxId='status%d%d', vboxText = "
 			"'<a href=https://www.nagios.com/tours target=_blank>"
 			"Click here to watch the entire Nagios Core 4 Tour!</a>';\n",
 			display_type, group_style_type);
+    }
 	printf("$(document).ready(function() {\n"
 			"$('#top_page_numbers').append($('#bottom_page_numbers').html() );\n");
 	if (display_type == DISPLAY_HOSTS)
@@ -555,7 +560,7 @@ void document_header(int use_stylesheet) {
 		else if (group_style_type == STYLE_HOST_DETAIL)
 			vidurl = "https://www.youtube.com/embed/nNiRr0hDZag";
 	}
-	if (vidurl) {
+	if (0) {
 		printf("var user = '%s';\nvBoxId += ';' + user;",
 			 current_authdata.username);
 		printf("vbox = new vidbox({pos:'lr',vidurl:'%s',text:vboxText,"

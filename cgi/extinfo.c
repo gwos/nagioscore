@@ -109,6 +109,9 @@ int display_header = TRUE;
 /* Establish that this patch is in place. */
 char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
+/* Establish that this patch is in place. */
+char no_tour_patch_ident[] = "$NoTourPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
 int main(void) {
 	int found = FALSE;
 	char temp_buffer[MAX_INPUT_BUFFER] = "";
@@ -562,7 +565,7 @@ void document_header(int use_stylesheet) {
 	else if(display_type == DISPLAY_SERVICE_INFO)
 		vidurl = "https://www.youtube.com/embed/f_knwQOS6FI";
 
-	if (vidurl) {
+	if (0) {
 		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_JS);
 		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, NAGFUNCS_JS);
 		printf("<script type='text/javascript'>\n");
