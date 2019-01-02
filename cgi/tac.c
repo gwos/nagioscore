@@ -180,6 +180,8 @@ int services_critical_disabled = 0;
 int services_critical_unacknowledged = 0;
 int services_critical = 0;
 
+/* Establish that this patch is in place. */
+char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 /*efine DEBUG 1*/
 
@@ -275,7 +277,7 @@ void document_header(int use_stylesheet) {
 
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");
-	printf("Refresh: %d\r\n", refresh_rate);
+	// printf("Refresh: %d\r\n", refresh_rate);
 
 	time(&current_time);
 	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
@@ -323,7 +325,8 @@ void document_header(int use_stylesheet) {
 
 
 	printf("</HEAD>\n");
-	printf("<BODY CLASS='tac' marginwidth=2 marginheight=2 topmargin=0 leftmargin=0 rightmargin=0>\n");
+	printf("<BODY CLASS='tac' marginwidth=2 marginheight=2 topmargin=0 leftmargin=0 rightmargin=0"
+	       " onload='setTimeout(\"location=self.location;\",%d)'>\n", (refresh_rate ? refresh_rate : 1000000) * 1000);
 
 	/* include user SSI header */
 	include_ssi_files(TAC_CGI, SSI_HEADER);

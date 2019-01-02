@@ -189,7 +189,8 @@ int problem_services_unknown = 0;
 int embedded = FALSE;
 int display_header = TRUE;
 
-
+/* Establish that this patch is in place. */
+char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 int main(void) {
 
@@ -522,7 +523,7 @@ void document_header(int use_stylesheet) {
 
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");
-	printf("Refresh: %d\r\n", refresh_rate);
+	// printf("Refresh: %d\r\n", refresh_rate);
 
 	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
 	printf("Last-Modified: %s\r\n", date_time);
@@ -588,7 +589,8 @@ void document_header(int use_stylesheet) {
 
 	printf("</head>\n");
 
-	printf("<body class='status'>\n");
+	printf("<body class='status'"
+	       " onload='setTimeout(\"location=self.location;\",%d)'>\n", (refresh_rate ? refresh_rate : 1000000) * 1000);
 
 	/* include user SSI header */
 	include_ssi_files(STATUS_CGI, SSI_HEADER);
