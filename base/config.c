@@ -29,6 +29,8 @@
 #include "../include/nebmods.h"
 #include "../include/nebmodules.h"
 
+/* Establish that this patch is in place. */
+char no_deprecation_patch_ident[] = "$NoDeprecationWarningsPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 /*** helpers ****/
 /*
@@ -1188,7 +1190,10 @@ int read_main_config_file(char *main_config_file) {
 
 	if (deprecated) {
 		for (list = deprecated; list; list = list->next) {
-			logit(NSLOG_CONFIG_WARNING, TRUE, "%s", (char *)list->object_ptr);
+			// In GroundWork Monitor, we suppress all deprecation warnings.
+			// We'll handle these issues via Monarch instead, so there's no
+			// point in worrying the end-user about them.
+			// logit(NSLOG_CONFIG_WARNING, TRUE, "%s", (char *)list->object_ptr);
 			free(list->object_ptr);
 			}
 		free_objectlist(&deprecated);
