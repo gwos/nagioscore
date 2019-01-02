@@ -183,6 +183,9 @@ int services_critical = 0;
 /* Establish that this patch is in place. */
 char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
+/* Establish that this patch is in place. */
+char no_tour_patch_ident[] = "$NoTourPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
+
 /*define DEBUG 1*/
 
 int main(void) {
@@ -306,8 +309,6 @@ void document_header(int use_stylesheet) {
 		}
 
 	printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_JS);
-
-
 	if (enable_page_tour == TRUE) {
 		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, NAGFUNCS_JS);
 
@@ -321,8 +322,6 @@ void document_header(int use_stylesheet) {
 				"vidid:vBoxId});");
 		printf("\n});\n</script>\n");
 		}
-
-
 
 	printf("</HEAD>\n");
 	printf("<BODY CLASS='tac' marginwidth=2 marginheight=2 topmargin=0 leftmargin=0 rightmargin=0"
