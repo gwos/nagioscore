@@ -93,13 +93,13 @@ install:
 	rm -rf $(DESTDIR)$(HTMLDIR)/d3
 	rm -rf $(DESTDIR)$(HTMLDIR)/spin
 
-	for file in *.php; \
-	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR); done
+#	for file in *.php; \
+#	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR); done
 	for file in js/*.js; \
 	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR)/js; done
 
-	for file in $(srcdir)/*.php; \
-	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR); done
+#	for file in $(srcdir)/*.php; \
+#	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR); done
 #	for file in media/*.wav; \
 #	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR)/media; done
 	for file in $(srcdir)/stylesheets/*.css; \
@@ -124,6 +124,7 @@ install:
 	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR)/images/logos; done
 	for file in $(srcdir)/includes/*.*; \
 	do $(INSTALL) -m 664 $(INSTALL_OPTS) $$file $(DESTDIR)$(HTMLDIR)/includes; done
+	rm -f $(DESTDIR)$(HTMLDIR)/includes/*.php
 
 install-unstripped:
 	$(MAKE) install
