@@ -106,7 +106,8 @@ int sort_option = SORT_NEXTCHECKTIME;
 int embedded = FALSE;
 int display_header = TRUE;
 
-
+/* Establish that this patch is in place. */
+char refresh_patch_ident[] = "$RefreshPatchCompileTime: " __TIME__ " on " __DATE__ " (" __FILE__ ") $";
 
 int main(void) {
 	int found = FALSE;
@@ -528,7 +529,7 @@ void document_header(int use_stylesheet) {
 
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");
-	printf("Refresh: %d\r\n", refresh_rate);
+	// printf("Refresh: %d\r\n", refresh_rate);
 
 	time(&current_time);
 	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
@@ -579,7 +580,8 @@ void document_header(int use_stylesheet) {
 
 	printf("</head>\n");
 
-	printf("<body CLASS='extinfo'>\n");
+	printf("<body CLASS='extinfo'"
+	       " onload='setTimeout(\"location=self.location;\",%d)'>\n", (refresh_rate ? refresh_rate : 1000000) * 1000);
 
 	/* include user SSI header */
 	include_ssi_files(EXTINFO_CGI, SSI_HEADER);
