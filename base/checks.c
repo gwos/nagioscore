@@ -2457,16 +2457,6 @@ int handle_async_host_check_result(host *hst, check_result *cr)
 		send_notification = TRUE;
 	}
 
-	/* neb module wants to override the service check - perhaps it will check the service itself */
-	if (neb_result == NEBERROR_CALLBACKOVERRIDE) {
-		clear_volatile_macros_r(&mac);
-		hst->latency = old_latency;
-		free_check_result(cr);
-		// FIX MINOR:  This looks like a memory leak to me -- don't we need my_free(cr) here as well?  Who free()s the cr?
-		my_free(processed_command);
-		return OK;
-	}
-
 	/* handle some acknowledgement things and update last_state_change */
 	/* @fixme 4.5.0 - See similar comment in handle_async_service_check_result() */
 	int original_last_hard_state = hst->last_hard_state;
