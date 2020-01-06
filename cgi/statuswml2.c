@@ -191,11 +191,11 @@ void document_header(void) {
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");
 
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = (time_t)0L;
-	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-type: text/vnd.wap.wml\r\n\r\n");
@@ -907,7 +907,7 @@ void display_host(void) {
 
 	printf("<tr><td>Info:</td><td>%s</td></tr>\n", temp_hoststatus->plugin_output);
 
-	get_time_string(&temp_hoststatus->last_check, last_check, sizeof(last_check) - 1, SHORT_DATE_TIME, TRUE);
+	get_time_string(&temp_hoststatus->last_check, last_check, sizeof(last_check) - 1, SHORT_DATE_TIME, TRUE, FALSE);
 	printf("<tr><td>Last Check:</td><td>%s</td></tr>\n", last_check);
 
 	current_time = time(NULL);
@@ -1124,7 +1124,7 @@ void display_service(void) {
 
 	printf("<tr><td>Info:</td><td>%s</td></tr>\n", temp_servicestatus->plugin_output);
 
-	get_time_string(&temp_servicestatus->last_check, last_check, sizeof(last_check) - 1, SHORT_DATE_TIME, TRUE);
+	get_time_string(&temp_servicestatus->last_check, last_check, sizeof(last_check) - 1, SHORT_DATE_TIME, TRUE, FALSE);
 	printf("<tr><td>Last Check:</td><td>%s</td></tr>\n", last_check);
 
 	current_time = time(NULL);

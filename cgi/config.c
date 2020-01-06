@@ -285,7 +285,7 @@ void document_header(int use_stylesheet) {
 		return;
 
 	time(&t);
-	get_time_string(&t, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&t, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");

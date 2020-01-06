@@ -283,7 +283,7 @@ int add_host_status(hoststatus *new_hoststatus) {
 				new_hoststatus->status = HOST_PENDING;
 			my_free(new_hoststatus->plugin_output);
 			if(new_hoststatus->should_be_scheduled == TRUE) {
-				get_time_string(&new_hoststatus->next_check, date_string, sizeof(date_string), LONG_DATE_TIME, FALSE);
+				get_time_string(&new_hoststatus->next_check, date_string, sizeof(date_string), LONG_DATE_TIME, FALSE, FALSE);
 				asprintf(&new_hoststatus->plugin_output, "Host check scheduled for %s", date_string);
 				}
 			else {
