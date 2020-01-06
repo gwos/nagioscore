@@ -510,7 +510,7 @@ extern const char *cmd_error_strerror(int error_code);
 #define MAX_COMMAND_BUFFER                      8192    /* max length of raw or processed command line */
 #define MAX_EXTERNAL_COMMAND_LENGTH             8192    /* max length of an external command */
 
-#define MAX_DATETIME_LENGTH			48
+#define MAX_DATETIME_LENGTH			128
 
 
 /************************* MODIFIED ATTRIBUTES **************************/
