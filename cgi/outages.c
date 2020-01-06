@@ -164,11 +164,11 @@ void document_header(int use_stylesheet) {
 	// printf("Refresh: %d\r\n", refresh_rate);
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = (time_t)0L;
-	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-type: text/html; charset=utf-8\r\n\r\n");

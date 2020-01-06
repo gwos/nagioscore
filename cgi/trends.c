@@ -496,8 +496,8 @@ int main(int argc, char **argv) {
 
 			printf("<BR CLEAR=ALL>\n");
 
-			get_time_string(&t1, start_timestring, sizeof(start_timestring) - 1, SHORT_DATE_TIME, TRUE);
-			get_time_string(&t2, end_timestring, sizeof(end_timestring) - 1, SHORT_DATE_TIME, TRUE);
+			get_time_string(&t1, start_timestring, sizeof(start_timestring) - 1, SHORT_DATE_TIME, TRUE, FALSE);
+			get_time_string(&t2, end_timestring, sizeof(end_timestring) - 1, SHORT_DATE_TIME, TRUE, FALSE);
 			printf("<div align=center class='reportRange'>%s to %s</div>\n", start_timestring, end_timestring);
 
 			get_time_breakdown((time_t)(t2 - t1), &days, &hours, &minutes, &seconds);
@@ -1207,11 +1207,11 @@ void document_header(int use_stylesheet) {
 		printf("Pragma: no-cache\r\n");
 
 		time(&current_time);
-		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
+		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Last-Modified: %s\r\n", date_time);
 
 		expire_time = (time_t)0;
-		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
+		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Expires: %s\r\n", date_time);
 
 		printf("Content-type: text/html; charset=utf-8\r\n\r\n");
@@ -1257,11 +1257,11 @@ void document_header(int use_stylesheet) {
 		printf("Pragma: no-cache\r\n");
 
 		time(&current_time);
-		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
+		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Last-Modified: %s\r\n", date_time);
 
 		expire_time = (time_t)0L;
-		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
+		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Expires: %s\r\n", date_time);
 
 		printf("Content-Type: image/png\r\n\r\n");
