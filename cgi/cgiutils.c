@@ -993,10 +993,10 @@ void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type
 		else
 			type_format_str = "short-time";
 		if(html_input_value == FALSE)
-			/* browser local timezone HTML span tag */ 
+			/* browser local timezone HTML <span> tag */
 			snprintf(buffer, buffer_length, "<span class=\"browser-local-timezone\" data-type=\"%s\">%jd</span>", type_format_str, t);
 		else
-			/* browser local timezone HTML hidden input tag value */ 
+			/* browser local timezone HTML hidden <input> tag metadata value */
 			snprintf(buffer, buffer_length, "%s:%jd", type_format_str, t);
 		buffer[buffer_length - 1] = '\x0';
 		return;
