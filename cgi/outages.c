@@ -164,11 +164,11 @@ void document_header(int use_stylesheet) {
 	// printf("Refresh: %d\r\n", refresh_rate);
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = (time_t)0L;
-	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-type: text/html; charset=utf-8\r\n\r\n");
@@ -187,6 +187,9 @@ void document_header(int use_stylesheet) {
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>", url_stylesheets_path, COMMON_CSS);
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>", url_stylesheets_path, OUTAGES_CSS);
 		}
+
+	/* include browser local timezone rendering scripting */
+	include_browser_local_timezone_rendering(TRUE, TRUE);
 
 	printf("</head>\n");
 
