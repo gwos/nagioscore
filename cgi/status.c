@@ -531,11 +531,11 @@ void document_header(int use_stylesheet) {
 	printf("Pragma: no-cache\r\n");
 	// printf("Refresh: %d\r\n", refresh_rate);
 
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = (time_t)0L;
-	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE);
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-type: text/html; charset=utf-8\r\n\r\n");
@@ -1741,7 +1741,7 @@ void show_service_detail(void) {
 
 			/* get the last service check time */
 			t = temp_status->last_check;
-			get_time_string(&t, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE);
+			get_time_string(&t, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			if((unsigned long)temp_status->last_check == 0L)
 				strcpy(date_time, "N/A");
 
@@ -2329,7 +2329,7 @@ void show_host_detail(void) {
 
 			/* get the last host check time */
 			t = temp_status->last_check;
-			get_time_string(&t, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE);
+			get_time_string(&t, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			if((unsigned long)temp_status->last_check == 0L)
 				strcpy(date_time, "N/A");
 
