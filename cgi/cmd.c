@@ -1102,6 +1102,7 @@ void request_command_data(int cmd) {
 			printf("<tr><td CLASS='optBoxRequiredItem'>Check Time:</td><td><b>");
 			if(enable_browser_local_timezone == TRUE) {
 				printf("<INPUT TYPE='TEXT' NAME='start_time'>");
+				/* add browser local timezone hidden <input> tag metadata */
 				printf("<INPUT TYPE='HIDDEN' NAME='start_time_browser_local_timezone' VALUE='%s'>", buffer);
 				}
 			else
@@ -1277,6 +1278,7 @@ void request_command_data(int cmd) {
 			printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
 			if(enable_browser_local_timezone == TRUE) {
 				printf("<INPUT TYPE='TEXT' NAME='start_time'>");
+				/* add browser local timezone hidden <input> tag metadata */
 				printf("<INPUT TYPE='HIDDEN' NAME='start_time_browser_local_timezone' VALUE='%s'>", buffer);
 				}
 			else
@@ -1287,6 +1289,7 @@ void request_command_data(int cmd) {
 			printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
 			if(enable_browser_local_timezone == TRUE) {
 				printf("<INPUT TYPE='TEXT' NAME='end_time'>");
+				/* add browser local timezone hidden <input> tag metadata */
 				printf("<INPUT TYPE='HIDDEN' NAME='end_time_browser_local_timezone' VALUE='%s'>", buffer);
 				}
 			else
