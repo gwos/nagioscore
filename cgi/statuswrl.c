@@ -194,11 +194,11 @@ void document_header(void) {
 	printf("Pragma: no-cache\r\n");
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = 0L;
-	get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-Type: x-world/x-vrml\r\n\r\n");

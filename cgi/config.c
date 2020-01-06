@@ -285,7 +285,7 @@ void document_header(int use_stylesheet) {
 		return;
 
 	time(&t);
-	get_time_string(&t, date_time, sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&t, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE);
 
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");
@@ -305,6 +305,9 @@ void document_header(int use_stylesheet) {
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, COMMON_CSS);
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, CONFIG_CSS);
 		}
+
+	/* include browser local timezone rendering scripting */
+	include_browser_local_timezone_rendering(TRUE, TRUE);
 
 	printf("</head>\n");
 

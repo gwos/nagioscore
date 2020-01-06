@@ -102,6 +102,8 @@ int		color_transparency_index_r = 255;
 int		color_transparency_index_g = 255;
 int		color_transparency_index_b = 255;
 
+int             enable_browser_local_timezone = FALSE;
+
 extern hoststatus      *hoststatus_list;
 extern servicestatus   *servicestatus_list;
 
@@ -222,6 +224,8 @@ void reset_cgi_vars(void) {
 	statuswrl_include = NULL;
 
 	ping_syntax = NULL;
+
+	enable_browser_local_timezone = FALSE;
 
 	return;
 	}
@@ -443,6 +447,10 @@ int read_cgi_config_file(const char *filename, read_config_callback callback) {
 			ack_no_send = (atoi(val) > 0) ? TRUE : FALSE;
 		else if(!strcmp(var, "tac_cgi_hard_only"))
 			tac_cgi_hard_only = (atoi(val) > 0) ? TRUE : FALSE;
+
+		else if(!strcmp(var, "enable_browser_local_timezone"))
+			enable_browser_local_timezone = (atoi(val) > 0) ? TRUE : FALSE;
+
 		else if (callback)
 			(*callback)(var,val);
 		}
@@ -941,7 +949,7 @@ void sanitize_plugin_output(char *buffer) {
 
 
 /* get date/time string */
-void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type) {
+void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type, int html_allowed) {
 	time_t t;
 	struct tm *tm_ptr = NULL;
 	int hour = 0;
@@ -953,11 +961,40 @@ void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type
 	const char *weekdays[7] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 	const char *months[12] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
 	const char *tzone = "";
+	char *type_format_str = NULL;
 
 	if(raw_time == NULL)
 		time(&t);
 	else
 		t = *raw_time;
+
+	if(enable_browser_local_timezone == TRUE && type != HTTP_DATE_TIME && html_allowed == TRUE) {
+		if(type == LONG_DATE_TIME)
+			type_format_str = "long-date";
+		else if(type == SHORT_DATE_TIME) {
+			if(date_format == DATE_FORMAT_EURO)
+				type_format_str = "short-date-time-euro";
+			else if(date_format == DATE_FORMAT_ISO8601)
+				type_format_str = "short-date-time-iso";
+			else if(date_format == DATE_FORMAT_STRICT_ISO8601)
+				type_format_str = "short-date-time-iso-strict";
+			else
+				type_format_str = "short-date-time";
+			}
+		else if(type == SHORT_DATE) {
+			if(date_format == DATE_FORMAT_EURO)
+				type_format_str = "short-date-euro";
+			else if(date_format == DATE_FORMAT_ISO8601 || date_format == DATE_FORMAT_STRICT_ISO8601)
+				type_format_str = "short-date-iso";
+			else
+				type_format_str = "short-date";
+			}
+		else
+			type_format_str = "short-time";
+		snprintf(buffer, buffer_length, "<span class=\"browser-local-timezone\" data-type=\"%s\">%jd</span>", type_format_str, t);
+		buffer[buffer_length - 1] = '\x0';
+		return;
+		}
 
 	if(type == HTTP_DATE_TIME)
 		tm_ptr = gmtime(&t);
@@ -1653,7 +1690,7 @@ void display_info_table(const char *title, int refresh, authdata *current_authda
 	printf("<DIV CLASS='infoBoxTitle'>%s</DIV>\n", title);
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE);
 
 	printf("Last Updated: %s<BR>\n", date_time);
 	if(refresh == TRUE)
@@ -1709,13 +1746,13 @@ void display_nav_table(char *url, int archive) {
 
 		printf("<td align=center CLASS='navBoxDate'>\n");
 		printf("<DIV CLASS='navBoxTitle'>Log File Navigation</DIV>\n");
-		get_time_string(&last_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
+		get_time_string(&last_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE);
 		printf("%s", date_time);
 		printf("<br>to<br>");
 		if(archive == 0)
 			printf("Present..");
 		else {
-			get_time_string(&this_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME);
+			get_time_string(&this_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE);
 			printf("%s", date_time);
 			}
 		printf("</td>\n");
@@ -2160,4 +2197,50 @@ void strip_splunk_query_terms(char *buffer) {
 	buffer[y++] = '\x0';
 
 	return;
+	}
+
+
+/* include browser local timezone datetime rendering if enabled */
+void include_browser_local_timezone_rendering(int include_jquery_js, int include_nagfuncs_js) {
+	if(enable_browser_local_timezone == TRUE) {
+		/* include jquery */
+		if(include_jquery_js == TRUE) {
+			printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_JS);
+			}
+		/* include nagios utility functions */
+		if(include_nagfuncs_js == TRUE) {
+			printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, NAGFUNCS_JS);
+			}
+		/* include browser local timezone rendering processing and hooks... */
+		printf("<script type='text/javascript'>\n");
+		printf("$(document).ready(function() {\n");
+		/* ...format datetime <span> tags */
+		printf("        $('span.browser-local-timezone').replaceWith(function(){\n");
+		printf("                return browserLocalTimezoneFormat($(this).data('type'), $(this).text());\n");
+		printf("        });\n");
+		/* ...format datetime form input values */
+		printf("        $('input[name$=\\'_browser_local_timezone\\']').each(function(){\n");
+		printf("                var value = /<span\\sclass=\"browser-local-timezone\"\\sdata-type=\"(.+)\">(\\d+)<\\/span>/.exec($(this).val());\n");
+		printf("                if (!!value) {\n");
+		printf("                        var name = $(this).attr('name');\n");
+		printf("                        var target = name.substring(0, name.length - '_browser_local_timezone'.length);\n");
+		printf("                        $('input[name=\\'' + target + '\\']').val(browserLocalTimezoneFormat(value[1], value[2]));\n");
+		printf("                }\n");
+		printf("        });\n");
+		/* ...parse datetime form input values on submit */
+		printf("        $('form').submit(function(){\n");
+		printf("                var form = $(this);\n");
+		printf("                form.find('input[name$=\\'_browser_local_timezone\\']').each(function(){\n");
+		printf("                        var value = /<span\\sclass=\"browser-local-timezone\"\\sdata-type=\"(.+)\">\\d+<\\/span>/.exec($(this).val());\n");
+		printf("                        if (!!value) {\n");
+		printf("                                var name = $(this).attr('name');\n");
+		printf("                                var target = name.substring(0, name.length - '_browser_local_timezone'.length);\n");
+		printf("                                var timestamp = browserLocalTimezoneParse(value[1], form.find('input[name=\\'' + target + '\\']').val());\n");
+		printf("                                form.find('input[name=\\'' + target + '\\']').val(timestamp);\n");
+		printf("                        }\n");
+		printf("                });\n");
+		printf("        });\n");
+		printf("});\n");
+		printf("</script>\n");
+		}
 	}

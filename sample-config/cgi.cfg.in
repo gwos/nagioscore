@@ -420,3 +420,16 @@ navbar_search_for_aliases=1
 #CMT_ACKNOWLEDGE_HOST_PROBLEM=2,"Problem is being looked into"
 #CMT_SCHEDULE_SVC_CHECK=1
 #CMT_SCHEDULE_HOST_DOWNTIME=0
+
+
+
+# BROWSER LOCAL TIMEZONE
+# If enabled, this option renders dates and times in the Nagios UI using
+# the browser's local timezone. Browser local timezone datetime
+# formmatting and parsing will not function properly when page is rendered
+# with the embedded CGI variable set.
+# Values: 1 = enable browser local timezone
+#         0 = disable browser local timezone and fallback to
+#             specified timezone or system default (default)
+
+enable_browser_local_timezone=0
