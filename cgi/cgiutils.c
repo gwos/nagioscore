@@ -953,7 +953,7 @@ void sanitize_plugin_output(char *buffer) {
 
 
 
-/* get date/time string in test and HTML formats */
+/* get date/time string in text and HTML formats */
 void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type, int html_allowed, int html_input_value) {
 	time_t t;
 	struct tm *tm_ptr = NULL;
@@ -998,8 +998,10 @@ void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type
 		else
 			type_format_str = "short-time";
 		if(html_input_value == FALSE)
+			/* browser local timezone HTML span tag */ 
 			snprintf(buffer, buffer_length, "<span class=\"browser-local-timezone\" data-type=\"%s\">%jd</span>", type_format_str, t);
 		else
+			/* browser local timezone HTML hidden input tag value */ 
 			snprintf(buffer, buffer_length, "%s:%jd", type_format_str, t);
 		buffer[buffer_length - 1] = '\x0';
 		return;
@@ -2194,7 +2196,7 @@ void include_browser_local_timezone_rendering(int include_jquery_js, int include
 		printf("        $('span.browser-local-timezone').replaceWith(function(){\n");
 		printf("                return browserLocalTimezoneFormat($(this).data('type'), $(this).text());\n");
 		printf("        });\n");
-		/* ...format datetime form input values */
+		/* ...format datetime form <input> tag values using hidden <input> tag metadata */
 		printf("        $('input[name$=\\'_browser_local_timezone\\']').each(function(){\n");
 		printf("                var value = /^([^:]+):(\\d+)$/.exec($(this).val());\n");
 		printf("                if (!!value) {\n");
@@ -2203,7 +2205,7 @@ void include_browser_local_timezone_rendering(int include_jquery_js, int include
 		printf("                        $('input[name=\\'' + target + '\\']').val(browserLocalTimezoneFormat(value[1], value[2]));\n");
 		printf("                }\n");
 		printf("        });\n");
-		/* ...parse datetime form input values on submit */
+		/* ...parse datetime form <input> tag values on submit using hidden <input> tag metadata */
 		printf("        $('form').submit(function(){\n");
 		printf("                var form = $(this);\n");
 		printf("                form.find('input[name$=\\'_browser_local_timezone\\']').each(function(){\n");
