@@ -1098,7 +1098,7 @@ void request_command_data(int cmd) {
 				printf("</b></td></tr>\n");
 				}
 			time(&t);
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE, TRUE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>Check Time:</td><td><b>");
 			if(enable_browser_local_timezone == TRUE) {
 				printf("<INPUT TYPE='TEXT' NAME='start_time'>");
@@ -1256,14 +1256,14 @@ void request_command_data(int cmd) {
 				if(temp_downtime->type != HOST_DOWNTIME)
 					continue;
 				printf("<option value='%lu'>", temp_downtime->downtime_id);
-				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME, TRUE);
+				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME, TRUE, FALSE);
 				printf("ID: %lu, Host '%s' starting @ %s\n", temp_downtime->downtime_id, temp_downtime->host_name, start_time_str);
 				}
 			for(temp_downtime = scheduled_downtime_list; temp_downtime != NULL; temp_downtime = temp_downtime->next) {
 				if(temp_downtime->type != SERVICE_DOWNTIME)
 					continue;
 				printf("<option value='%lu'>", temp_downtime->downtime_id);
-				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME, TRUE);
+				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME, TRUE, FALSE);
 				printf("ID: %lu, Service '%s' on host '%s' starting @ %s \n", temp_downtime->downtime_id, temp_downtime->service_description, temp_downtime->host_name, start_time_str);
 				}
 
@@ -1273,7 +1273,7 @@ void request_command_data(int cmd) {
 			printf("<tr><td CLASS='optBoxItem'><br></td></tr>\n");
 
 			time(&t);
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE, TRUE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
 			if(enable_browser_local_timezone == TRUE) {
 				printf("<INPUT TYPE='TEXT' NAME='start_time'>");
@@ -1283,7 +1283,7 @@ void request_command_data(int cmd) {
 				printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
 			t += (unsigned long)7200;
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE, TRUE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
 			if(enable_browser_local_timezone == TRUE) {
 				printf("<INPUT TYPE='TEXT' NAME='end_time'>");
@@ -1384,12 +1384,12 @@ void request_command_data(int cmd) {
 				}
 			print_comment_field(cmd);
 			time(&t);
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, FALSE);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, FALSE, FALSE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
 			printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
 			t += (unsigned long)7200;
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, FALSE);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, FALSE, FALSE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
 			printf("<INPUT TYPE='TEXT' NAME='end_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
@@ -2831,7 +2831,7 @@ int string_to_time(char *buffer, time_t *t) {
 	struct tm lt;
 	int ret = 0;
 
-	/* accept unix timestamp as input */
+	/* accept unix timestamp as input for browser local timezone support */
 	if(strlen(buffer) > 0 && strchr(buffer, '-') == NULL && strchr(buffer, ':') == NULL) {
 		*t = strtol(buffer, NULL, 10);
 		if(*t > (time_t)1500000000L && *t < LONG_MAX)

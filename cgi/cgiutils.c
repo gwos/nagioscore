@@ -948,8 +948,8 @@ void sanitize_plugin_output(char *buffer) {
 
 
 
-/* get date/time string */
-void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type, int html_allowed) {
+/* get date/time string in test and HTML formats */
+void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type, int html_allowed, int html_input_value) {
 	time_t t;
 	struct tm *tm_ptr = NULL;
 	int hour = 0;
@@ -968,6 +968,7 @@ void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type
 	else
 		t = *raw_time;
 
+	/* browser local timezone HTML formatting support */ 
 	if(enable_browser_local_timezone == TRUE && type != HTTP_DATE_TIME && html_allowed == TRUE) {
 		if(type == LONG_DATE_TIME)
 			type_format_str = "long-date";
@@ -991,7 +992,10 @@ void get_time_string(time_t *raw_time, char *buffer, int buffer_length, int type
 			}
 		else
 			type_format_str = "short-time";
-		snprintf(buffer, buffer_length, "<span class=\"browser-local-timezone\" data-type=\"%s\">%jd</span>", type_format_str, t);
+		if(html_input_value == FALSE)
+			snprintf(buffer, buffer_length, "<span class=\"browser-local-timezone\" data-type=\"%s\">%jd</span>", type_format_str, t);
+		else
+			snprintf(buffer, buffer_length, "%s:%jd", type_format_str, t);
 		buffer[buffer_length - 1] = '\x0';
 		return;
 		}
@@ -1690,7 +1694,7 @@ void display_info_table(const char *title, int refresh, authdata *current_authda
 	printf("<DIV CLASS='infoBoxTitle'>%s</DIV>\n", title);
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE, FALSE);
 
 	printf("Last Updated: %s<BR>\n", date_time);
 	if(refresh == TRUE)
@@ -1746,13 +1750,13 @@ void display_nav_table(char *url, int archive) {
 
 		printf("<td align=center CLASS='navBoxDate'>\n");
 		printf("<DIV CLASS='navBoxTitle'>Log File Navigation</DIV>\n");
-		get_time_string(&last_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE);
+		get_time_string(&last_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE, FALSE);
 		printf("%s", date_time);
 		printf("<br>to<br>");
 		if(archive == 0)
 			printf("Present..");
 		else {
-			get_time_string(&this_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE);
+			get_time_string(&this_scheduled_log_rotation, date_time, (int)sizeof(date_time), LONG_DATE_TIME, TRUE, FALSE);
 			printf("%s", date_time);
 			}
 		printf("</td>\n");
@@ -2220,7 +2224,7 @@ void include_browser_local_timezone_rendering(int include_jquery_js, int include
 		printf("        });\n");
 		/* ...format datetime form input values */
 		printf("        $('input[name$=\\'_browser_local_timezone\\']').each(function(){\n");
-		printf("                var value = /<span\\sclass=\"browser-local-timezone\"\\sdata-type=\"(.+)\">(\\d+)<\\/span>/.exec($(this).val());\n");
+		printf("                var value = /^([^:]+):(\\d+)$/.exec($(this).val());\n");
 		printf("                if (!!value) {\n");
 		printf("                        var name = $(this).attr('name');\n");
 		printf("                        var target = name.substring(0, name.length - '_browser_local_timezone'.length);\n");
@@ -2231,7 +2235,7 @@ void include_browser_local_timezone_rendering(int include_jquery_js, int include
 		printf("        $('form').submit(function(){\n");
 		printf("                var form = $(this);\n");
 		printf("                form.find('input[name$=\\'_browser_local_timezone\\']').each(function(){\n");
-		printf("                        var value = /<span\\sclass=\"browser-local-timezone\"\\sdata-type=\"(.+)\">\\d+<\\/span>/.exec($(this).val());\n");
+		printf("                        var value = /^([^:]+):\\d+$/.exec($(this).val());\n");
 		printf("                        if (!!value) {\n");
 		printf("                                var name = $(this).attr('name');\n");
 		printf("                                var target = name.substring(0, name.length - '_browser_local_timezone'.length);\n");
