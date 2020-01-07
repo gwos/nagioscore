@@ -317,11 +317,11 @@ void document_header(int use_stylesheet) {
 		// printf("Refresh: %d\r\n", refresh_rate);
 
 		time(&current_time);
-		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
+		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Last-Modified: %s\r\n", date_time);
 
 		expire_time = 0L;
-		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
+		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Expires: %s\r\n", date_time);
 
 		printf("Content-Type: text/html; charset=utf-8\r\n\r\n");
@@ -344,6 +344,9 @@ void document_header(int use_stylesheet) {
 		/* write JavaScript code for popup window */
 		write_popup_code();
 
+		/* include browser local timezone rendering scripting */
+		include_browser_local_timezone_rendering(TRUE, TRUE);
+
 		printf("</head>\n");
 
 		printf("<body CLASS='statusmap' name='mappage' id='mappage'"
@@ -364,11 +367,11 @@ void document_header(int use_stylesheet) {
 		printf("Pragma: no-cache\n");
 
 		time(&current_time);
-		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
+		get_time_string(&current_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Last-Modified: %s\n", date_time);
 
 		expire_time = (time_t)0L;
-		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME);
+		get_time_string(&expire_time, date_time, sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 		printf("Expires: %s\n", date_time);
 
 		printf("Content-Type: image/png\n\n");
@@ -1934,7 +1937,7 @@ void write_host_popup_text(host *hst) {
 	hostsmember *temp_hostsmember = NULL;
 	char *processed_string = NULL;
 	int service_totals;
-	char date_time[48];
+	char date_time[MAX_DATETIME_LENGTH];
 	time_t current_time;
 	time_t t;
 	char state_duration[48];
@@ -2013,9 +2016,9 @@ void write_host_popup_text(host *hst) {
 	state_duration[sizeof(state_duration) - 1] = '\x0';
 	printf("<tr><td class=\\\"popupText\\\">State Duration:</td><td class=\\\"popupText\\\"><b>%s</b></td></tr>", state_duration);
 
-	get_time_string(&temp_status->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+	get_time_string(&temp_status->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 	printf("<tr><td class=\\\"popupText\\\">Last Status Check:</td><td class=\\\"popupText\\\"><b>%s</b></td></tr>", (temp_status->last_check == (time_t)0) ? "N/A" : date_time);
-	get_time_string(&temp_status->last_state_change, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+	get_time_string(&temp_status->last_state_change, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 	printf("<tr><td class=\\\"popupText\\\">Last State Change:</td><td class=\\\"popupText\\\"><b>%s</b></td></tr>", (temp_status->last_state_change == (time_t)0) ? "N/A" : date_time);
 
 	printf("<tr><td class=\\\"popupText\\\">Parent Host(s):</td><td class=\\\"popupText\\\"><b>");

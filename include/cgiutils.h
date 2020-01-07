@@ -466,7 +466,7 @@ char *unescape_newlines(char *);
 void sanitize_plugin_output(char *);                            /* strips HTML and bad characters from plugin output */
 void strip_html_brackets(char *);				/* strips > and < from string */
 
-void get_time_string(time_t *, char *, int, int);			/* gets a date/time string */
+void get_time_string(time_t *, char *, int, int, int, int);		/* gets a date/time string in text and HTML formats */
 void get_interval_time_string(double, char *, int);		/* gets a time string for an interval of time */
 
 const char *url_encode(const char *);		        		/* encodes a string in proper URL format */
@@ -487,6 +487,8 @@ void display_splunk_host_url(host *);
 void display_splunk_service_url(service *);
 void display_splunk_generic_url(char *, int);
 void strip_splunk_query_terms(char *);
+
+void include_browser_local_timezone_rendering(int, int);	/* include browser local timezone datetime rendering if enabled */
 
 void include_ssi_files(const char *, int);                            /* include user-defined SSI footers/headers */
 void include_ssi_file(const char *);                                  /* include user-defined SSI footer/header */

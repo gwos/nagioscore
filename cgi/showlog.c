@@ -150,11 +150,11 @@ void document_header(int use_stylesheet) {
 	printf("Pragma: no-cache\r\n");
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = (time_t)0L;
-	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-type: text/html; charset=utf-8\r\n\r\n");
@@ -173,6 +173,9 @@ void document_header(int use_stylesheet) {
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, COMMON_CSS);
 		printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, SHOWLOG_CSS);
 		}
+
+	/* include browser local timezone rendering scripting */
+	include_browser_local_timezone_rendering(TRUE, TRUE);
 
 	printf("</HEAD>\n");
 	printf("<BODY CLASS='showlog'>\n");
@@ -487,7 +490,7 @@ int display_log(void) {
 				last_message_date[sizeof(last_message_date) - 1] = '\x0';
 				}
 
-			get_time_string(&t, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+			get_time_string(&t, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			strip(date_time);
 
 			temp_buffer = strtok(NULL, "\n");

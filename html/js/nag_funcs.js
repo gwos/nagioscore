@@ -272,3 +272,112 @@ vidbox.prototype.toggleFrame = function(quit)
 		}
 	}
 }
+
+/* --------------------------------------------------------------------------
+* Function:    browserLocalTimezoneFormat
+* Description: Format a unix epoch timestamp value using browser local timezone.
+* Arguments:   type - format type string
+*              timestamp - unix epoch timestamp
+* Return:      formatted datetime string or specified timestamp if unable to format
+* --------------------------------------------------------------------------*/
+browserLocalTimezoneFormat = function(type, timestamp) {
+
+	var weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+	var months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+	var pad = function(number, digits) {
+ 		return Array(Math.max(digits - String(number).length + 1, 0)).join(0) + number;
+	}
+
+	try {
+		var date = new Date(parseInt(timestamp.trim(), 10) * 1000);
+		switch (type) {
+			case "long-date":
+				return weekdays[date.getDay()] + " " + months[date.getMonth()] + " " + date.getDate() + " " +
+					pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2) + " " +
+					/.*\s(.+)/.exec(date.toLocaleString('en-US', {timeZoneName:'short'}))[1] + " " + date.getFullYear();
+			case "short-date":
+				return pad(date.getMonth() + 1, 2) + "-" + pad(date.getDate(), 2) + "-" + date.getFullYear();
+			case "short-date-euro":
+				return pad(date.getDate(), 2) + "-" + pad(date.getMonth() + 1, 2) + "-" + date.getFullYear();
+			case "short-date-iso":
+				return date.getFullYear() + "-" + pad(date.getMonth() + 1, 2) + "-" + pad(date.getDate(), 2);
+			case "short-date-time":
+				return pad(date.getMonth() + 1, 2) + "-" + pad(date.getDate(), 2) + "-" + date.getFullYear() + " " +
+					pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2);
+			case "short-date-time-euro":
+				return pad(date.getDate(), 2) + "-" + pad(date.getMonth() + 1, 2) + "-" + date.getFullYear() + " " +
+					pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2);
+			case "short-date-time-iso":
+				return date.getFullYear() + "-" + pad(date.getMonth() + 1, 2) + "-" + pad(date.getDate(), 2) + " " +
+					pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2);
+			case "short-date-time-iso-strict":
+				return date.getFullYear() + "-" + pad(date.getMonth() + 1, 2) + "-" + pad(date.getDate(), 2) + "T" +
+					pad(date.getHours(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2);
+			case "short-time":
+				return pad(date.getHour(), 2) + ":" + pad(date.getMinutes(), 2) + ":" + pad(date.getSeconds(), 2);
+		}
+	} catch (e) {
+	}
+	return timestamp;
+}
+
+/* --------------------------------------------------------------------------
+* Function:    browserLocalTimezoneParse
+* Description: Parse a formatted datetime string value using browser local timezone.
+* Arguments:   type - format type string
+*              datetime - formatted datetime string
+* Return:      unix epoch timestamp or specified datetime if unable to parse
+* --------------------------------------------------------------------------*/
+browserLocalTimezoneParse = function(type, datetime) {
+
+	var timestamp = function(year, month, day, hours, minutes, seconds) {
+		return new Date(parseInt(year, 10), parseInt(month, 10)-1, parseInt(day, 10),
+			parseInt(hours, 10), parseInt(minutes, 10), parseInt(seconds, 10)).getTime() / 1000;
+	}
+
+	try {
+		var parse;
+		switch (type) {
+			case "short-date":
+				parse = /^(\d+)-(\d+)-(\d+)$/.exec(datetime.trim());
+				if (!!parse) {
+					return timestamp(parse[3], parse[1], parse[2], '0', '0', '0');
+				}
+				break;
+			case "short-date-euro":
+				parse = /^(\d+)-(\d+)-(\d+)$/.exec(datetime.trim());
+				if (!!parse) {
+					return timestamp(parse[3], parse[2], parse[1], '0', '0', '0');
+				}
+				break;
+			case "short-date-iso":
+				parse = /^(\d+)-(\d+)-(\d+)$/.exec(datetime.trim());
+				if (!!parse) {
+					return timestamp(parse[1], parse[2], parse[3], '0', '0', '0');
+				}
+				break;
+			case "short-date-time":
+				parse = /^(\d+)-(\d+)-(\d+)\s+(\d+):(\d+):(\d+)$/.exec(datetime.trim());
+				if (!!parse) {
+					return timestamp(parse[3], parse[1], parse[2], parse[4], parse[5], parse[6]);
+				}
+				break;
+			case "short-date-time-euro":
+				parse = /^(\d+)-(\d+)-(\d+)\s+(\d+):(\d+):(\d+)$/.exec(datetime.trim());
+				if (!!parse) {
+					return timestamp(parse[3], parse[2], parse[1], parse[4], parse[5], parse[6]);
+				}
+				break;
+			case "short-date-time-iso":
+			case "short-date-time-iso-strict":
+				parse = /^(\d+)-(\d+)-(\d+)[\sT]+(\d+):(\d+):(\d+)$/.exec(datetime.trim());
+				if (!!parse) {
+					return timestamp(parse[1], parse[2], parse[3], parse[4], parse[5], parse[6]);
+				}
+				break;
+		}
+	} catch (e) {
+	}
+	return datetime;
+}

@@ -530,17 +530,18 @@ void document_header(int use_stylesheet) {
 	char *vidurl = NULL;
 	time_t current_time;
 	time_t expire_time;
+    int page_tour_included = FALSE;
 
 	printf("Cache-Control: no-store\r\n");
 	printf("Pragma: no-cache\r\n");
 	// printf("Refresh: %d\r\n", refresh_rate);
 
 	time(&current_time);
-	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&current_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Last-Modified: %s\r\n", date_time);
 
 	expire_time = (time_t)0L;
-	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME);
+	get_time_string(&expire_time, date_time, (int)sizeof(date_time), HTTP_DATE_TIME, FALSE, FALSE);
 	printf("Expires: %s\r\n", date_time);
 
 	printf("Content-type: text/html; charset=utf-8\r\n\r\n");
@@ -567,6 +568,7 @@ void document_header(int use_stylesheet) {
 		vidurl = "https://www.youtube.com/embed/f_knwQOS6FI";
 
 	if (enable_page_tour == TRUE && vidurl) {
+		page_tour_included = TRUE;
 		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, JQUERY_JS);
 		printf("<script type='text/javascript' src='%s%s'></script>\n", url_js_path, NAGFUNCS_JS);
 		printf("<script type='text/javascript'>\n");
@@ -581,6 +583,9 @@ void document_header(int use_stylesheet) {
 				"vidid:vBoxId});\n", vidurl);
 		printf("});\n</script>\n");
 		}
+
+	/* include browser local timezone rendering scripting */
+	include_browser_local_timezone_rendering(!page_tour_included, !page_tour_included);
 
 	printf("</head>\n");
 
@@ -783,7 +788,7 @@ void show_process_info(void) {
 	printf("<TR><TD CLASS='dataVar'>Program Version:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", PROGRAM_VERSION);
 
 	/* program start time */
-	get_time_string(&program_start, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+	get_time_string(&program_start, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 	printf("<TR><TD CLASS='dataVar'>Program Start Time:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", date_time);
 
 	/* total running time */
@@ -794,7 +799,7 @@ void show_process_info(void) {
 	printf("<TR><TD CLASS='dataVar'>Total Running Time:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", run_time_string);
 
 	/* last log file rotation */
-	get_time_string(&last_log_rotation, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+	get_time_string(&last_log_rotation, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 	printf("<TR><TD CLASS='dataVar'>Last Log File Rotation:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", (last_log_rotation == (time_t)0) ? "N/A" : date_time);
 
 	/* PID */
@@ -1033,7 +1038,7 @@ void show_host_info(void) {
 		printf("<TR><TD CLASS='dataVar'>Current Attempt:</TD><TD CLASS='dataVal'>%d/%d", temp_hoststatus->current_attempt, temp_hoststatus->max_attempts);
 		printf("&nbsp;&nbsp;(%s state)</TD></TR>\n", (temp_hoststatus->state_type == HARD_STATE) ? "HARD" : "SOFT");
 
-		get_time_string(&temp_hoststatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_hoststatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last Check Time:</td><td CLASS='dataVal'>%s</td></tr>\n", date_time);
 
 		printf("<TR><TD CLASS='dataVar'>Check Type:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", (temp_hoststatus->check_type == CHECK_TYPE_ACTIVE) ? "ACTIVE" : "PASSIVE");
@@ -1046,13 +1051,13 @@ void show_host_info(void) {
 		printf("&nbsp;/&nbsp;%.3f seconds", temp_hoststatus->execution_time);
 		printf("</TD></TR>\n");
 
-		get_time_string(&temp_hoststatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_hoststatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Next Scheduled Active Check:&nbsp;&nbsp;</TD><TD CLASS='dataVal'>%s</TD></TR>\n", (temp_hoststatus->checks_enabled && temp_hoststatus->next_check != (time_t)0 && temp_hoststatus->should_be_scheduled == TRUE) ? date_time : "N/A");
 
-		get_time_string(&temp_hoststatus->last_state_change, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_hoststatus->last_state_change, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last State Change:</td><td CLASS='dataVal'>%s</td></tr>\n", (temp_hoststatus->last_state_change == (time_t)0) ? "N/A" : date_time);
 
-		get_time_string(&temp_hoststatus->last_notification, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_hoststatus->last_notification, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last Notification:</td><td CLASS='dataVal'>%s&nbsp;(notification %d)</td></tr>\n", (temp_hoststatus->last_notification == (time_t)0) ? "N/A" : date_time, temp_hoststatus->current_notification_number);
 
 		printf("<TR><TD CLASS='dataVar'>Is This Host Flapping?</td><td CLASS='dataVal'>");
@@ -1080,7 +1085,7 @@ void show_host_info(void) {
 			snprintf(status_age, sizeof(status_age) - 1, "%2dd %2dh %2dm %2ds", days, hours, minutes, seconds);
 		status_age[sizeof(status_age) - 1] = '\x0';
 
-		get_time_string(&temp_hoststatus->last_update, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_hoststatus->last_update, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last Update:</td><td CLASS='dataVal'>%s&nbsp;&nbsp;(%s ago)</td></tr>\n", (temp_hoststatus->last_update == (time_t)0) ? "N/A" : date_time, status_age);
 
 		printf("</TABLE>\n");
@@ -1346,7 +1351,7 @@ void show_service_info(void) {
 		printf("<TR><TD CLASS='dataVar'>Current Attempt:</TD><TD CLASS='dataVal'>%d/%d", temp_svcstatus->current_attempt, temp_svcstatus->max_attempts);
 		printf("&nbsp;&nbsp;(%s state)</TD></TR>\n", (temp_svcstatus->state_type == HARD_STATE) ? "HARD" : "SOFT");
 
-		get_time_string(&temp_svcstatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_svcstatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last Check Time:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", date_time);
 
 		printf("<TR><TD CLASS='dataVar'>Check Type:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", (temp_svcstatus->check_type == CHECK_TYPE_ACTIVE) ? "ACTIVE" : "PASSIVE");
@@ -1359,13 +1364,13 @@ void show_service_info(void) {
 		printf("&nbsp;/&nbsp;%.3f seconds", temp_svcstatus->execution_time);
 		printf("</TD></TR>\n");
 
-		get_time_string(&temp_svcstatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_svcstatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Next Scheduled Check:&nbsp;&nbsp;</TD><TD CLASS='dataVal'>%s</TD></TR>\n", (temp_svcstatus->checks_enabled && temp_svcstatus->next_check != (time_t)0 && temp_svcstatus->should_be_scheduled == TRUE) ? date_time : "N/A");
 
-		get_time_string(&temp_svcstatus->last_state_change, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_svcstatus->last_state_change, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last State Change:</TD><TD CLASS='dataVal'>%s</TD></TR>\n", (temp_svcstatus->last_state_change == (time_t)0) ? "N/A" : date_time);
 
-		get_time_string(&temp_svcstatus->last_notification, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_svcstatus->last_notification, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last Notification:</TD><TD CLASS='dataVal'>%s&nbsp;(notification %d)</TD></TR>\n", (temp_svcstatus->last_notification == (time_t)0) ? "N/A" : date_time, temp_svcstatus->current_notification_number);
 
 		printf("<TR><TD CLASS='dataVar'>Is This Service Flapping?</TD><TD CLASS='dataVal'>");
@@ -1393,7 +1398,7 @@ void show_service_info(void) {
 			snprintf(status_age, sizeof(status_age) - 1, "%2dd %2dh %2dm %2ds", days, hours, minutes, seconds);
 		status_age[sizeof(status_age) - 1] = '\x0';
 
-		get_time_string(&temp_svcstatus->last_update, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_svcstatus->last_update, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<TR><TD CLASS='dataVar'>Last Update:</TD><TD CLASS='dataVal'>%s&nbsp;&nbsp;(%s ago)</TD></TR>\n", (temp_svcstatus->last_update == (time_t)0) ? "N/A" : date_time, status_age);
 
 
@@ -1832,8 +1837,8 @@ void show_all_comments(void) {
 				comment_type = "?";
 			}
 
-		get_time_string(&temp_comment->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
-		get_time_string(&temp_comment->expire_time, expire_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_comment->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
+		get_time_string(&temp_comment->expire_time, expire_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<tr CLASS='%s'>", bg_class);
 		printf("<td CLASS='%s'><A HREF='%s?type=%d&host=%s'>%s</A></td>", bg_class, EXTINFO_CGI, DISPLAY_HOST_INFO, url_encode(temp_comment->host_name), temp_comment->host_name);
 		printf("<td CLASS='%s'>%s</td><td CLASS='%s'>%s</td><td CLASS='%s'>%s</td><td CLASS='%s'>%ld</td><td CLASS='%s'>%s</td><td CLASS='%s'>%s</td><td CLASS='%s'>%s</td>", bg_class, date_time, bg_class, temp_comment->author, bg_class, temp_comment->comment_data, bg_class, temp_comment->comment_id, bg_class, (temp_comment->persistent) ? "Yes" : "No", bg_class, comment_type, bg_class, (temp_comment->expires == TRUE) ? expire_time : "N/A");
@@ -1908,8 +1913,8 @@ void show_all_comments(void) {
 				comment_type = "?";
 			}
 
-		get_time_string(&temp_comment->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
-		get_time_string(&temp_comment->expire_time, expire_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_comment->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
+		get_time_string(&temp_comment->expire_time, expire_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<tr CLASS='%s'>", bg_class);
 		printf("<td CLASS='%s'><A HREF='%s?type=%d&host=%s'>%s</A></td>", bg_class, EXTINFO_CGI, DISPLAY_HOST_INFO, url_encode(temp_comment->host_name), temp_comment->host_name);
 		printf("<td CLASS='%s'><A HREF='%s?type=%d&host=%s", bg_class, EXTINFO_CGI, DISPLAY_SERVICE_INFO, url_encode(temp_comment->host_name));
@@ -2556,8 +2561,8 @@ void display_comments(int type) {
 			else
 				temp_downtime = NULL;
 
-			get_time_string(&temp_comment->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
-			get_time_string(&temp_comment->expire_time, expire_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+			get_time_string(&temp_comment->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
+			get_time_string(&temp_comment->expire_time, expire_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			printf("<tr CLASS='%s'>", bg_class);
 			printf("<td CLASS='%s'>%s</td><td CLASS='%s'>%s</td>", bg_class, date_time, bg_class, temp_comment->author);
 			printf("<td CLASS='%s'>%s", bg_class, temp_comment->comment_data);
@@ -2643,13 +2648,13 @@ void show_all_downtime(void) {
 
 		printf("<tr CLASS='%s'>", bg_class);
 		printf("<td CLASS='%s'><A HREF='%s?type=%d&host=%s'>%s</A></td>", bg_class, EXTINFO_CGI, DISPLAY_HOST_INFO, url_encode(temp_downtime->host_name), temp_downtime->host_name);
-		get_time_string(&temp_downtime->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_downtime->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<td CLASS='%s'>%s</td>", bg_class, date_time);
 		printf("<td CLASS='%s'>%s</td>", bg_class, (temp_downtime->author == NULL) ? "N/A" : temp_downtime->author);
 		printf("<td CLASS='%s'>%s</td>", bg_class, (temp_downtime->comment == NULL) ? "N/A" : temp_downtime->comment);
-		get_time_string(&temp_downtime->start_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_downtime->start_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<td CLASS='%s'>%s</td>", bg_class, date_time);
-		get_time_string(&temp_downtime->end_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_downtime->end_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<td CLASS='%s'>%s</td>", bg_class, date_time);
 		printf("<td CLASS='%s'>%s</td>", bg_class, (temp_downtime->fixed == TRUE) ? "Fixed" : "Flexible");
 		get_time_breakdown(temp_downtime->duration, &days, &hours, &minutes, &seconds);
@@ -2713,13 +2718,13 @@ void show_all_downtime(void) {
 		printf("<td CLASS='%s'><A HREF='%s?type=%d&host=%s'>%s</A></td>", bg_class, EXTINFO_CGI, DISPLAY_HOST_INFO, url_encode(temp_downtime->host_name), temp_downtime->host_name);
 		printf("<td CLASS='%s'><A HREF='%s?type=%d&host=%s", bg_class, EXTINFO_CGI, DISPLAY_SERVICE_INFO, url_encode(temp_downtime->host_name));
 		printf("&service=%s'>%s</A></td>", url_encode(temp_downtime->service_description), temp_downtime->service_description);
-		get_time_string(&temp_downtime->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_downtime->entry_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<td CLASS='%s'>%s</td>", bg_class, date_time);
 		printf("<td CLASS='%s'>%s</td>", bg_class, (temp_downtime->author == NULL) ? "N/A" : temp_downtime->author);
 		printf("<td CLASS='%s'>%s</td>", bg_class, (temp_downtime->comment == NULL) ? "N/A" : temp_downtime->comment);
-		get_time_string(&temp_downtime->start_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_downtime->start_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<td CLASS='%s'>%s</td>", bg_class, date_time);
-		get_time_string(&temp_downtime->end_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+		get_time_string(&temp_downtime->end_time, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 		printf("<td CLASS='%s'>%s</td>", bg_class, date_time);
 		printf("<td CLASS='%s'>%s</td>", bg_class, (temp_downtime->fixed == TRUE) ? "Fixed" : "Flexible");
 		get_time_breakdown(temp_downtime->duration, &days, &hours, &minutes, &seconds);
@@ -2844,10 +2849,10 @@ void show_scheduling_queue(void) {
 			printf("<TD CLASS='queue%s'><A HREF='%s?type=%d&host=%s", bgclass, EXTINFO_CGI, DISPLAY_SERVICE_INFO, url_encode(temp_svcstatus->host_name));
 			printf("&service=%s'>%s</A></TD>", url_encode(temp_svcstatus->description), temp_svcstatus->description);
 
-			get_time_string(&temp_svcstatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+			get_time_string(&temp_svcstatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			printf("<TD CLASS='queue%s'>%s</TD>", bgclass, (temp_svcstatus->last_check == (time_t)0) ? "N/A" : date_time);
 
-			get_time_string(&temp_svcstatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+			get_time_string(&temp_svcstatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			printf("<TD CLASS='queue%s'>%s</TD>", bgclass, (temp_svcstatus->next_check == (time_t)0) ? "N/A" : date_time);
 
 			printf("<TD CLASS='queue%s'>", bgclass);
@@ -2886,10 +2891,10 @@ void show_scheduling_queue(void) {
 
 			printf("<TD CLASS='queue%s'>&nbsp;</TD>", bgclass);
 
-			get_time_string(&temp_hststatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+			get_time_string(&temp_hststatus->last_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			printf("<TD CLASS='queue%s'>%s</TD>", bgclass, (temp_hststatus->last_check == (time_t)0) ? "N/A" : date_time);
 
-			get_time_string(&temp_hststatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME);
+			get_time_string(&temp_hststatus->next_check, date_time, (int)sizeof(date_time), SHORT_DATE_TIME, TRUE, FALSE);
 			printf("<TD CLASS='queue%s'>%s</TD>", bgclass, (temp_hststatus->next_check == (time_t)0) ? "N/A" : date_time);
 
 			printf("<TD CLASS='queue%s'>", bgclass);

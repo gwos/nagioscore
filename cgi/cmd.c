@@ -45,6 +45,8 @@ extern int  lock_author_names;
 extern int ack_no_sticky;
 extern int ack_no_send;
 
+extern int enable_browser_local_timezone;
+
 #define MAX_AUTHOR_LENGTH	64
 #define MAX_COMMENT_LENGTH	1024
 
@@ -310,6 +312,9 @@ void document_header(int use_stylesheet) {
 			printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, COMMON_CSS);
 			printf("<LINK REL='stylesheet' TYPE='text/css' HREF='%s%s'>\n", url_stylesheets_path, COMMAND_CSS);
 			}
+
+		/* include browser local timezone rendering scripting */
+		include_browser_local_timezone_rendering(TRUE, TRUE);
 
 		printf("</head>\n");
 
@@ -1093,9 +1098,15 @@ void request_command_data(int cmd) {
 				printf("</b></td></tr>\n");
 				}
 			time(&t);
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE, TRUE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>Check Time:</td><td><b>");
-			printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
+			if(enable_browser_local_timezone == TRUE) {
+				printf("<INPUT TYPE='TEXT' NAME='start_time'>");
+				/* add browser local timezone hidden <input> tag metadata */
+				printf("<INPUT TYPE='HIDDEN' NAME='start_time_browser_local_timezone' VALUE='%s'>", buffer);
+				}
+			else
+				printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
 			print_comment_field(cmd);
 			printf("<tr><td CLASS='optBoxItem'>Force Check:</td><td><b>");
@@ -1246,14 +1257,14 @@ void request_command_data(int cmd) {
 				if(temp_downtime->type != HOST_DOWNTIME)
 					continue;
 				printf("<option value='%lu'>", temp_downtime->downtime_id);
-				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME);
+				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME, TRUE, FALSE);
 				printf("ID: %lu, Host '%s' starting @ %s\n", temp_downtime->downtime_id, temp_downtime->host_name, start_time_str);
 				}
 			for(temp_downtime = scheduled_downtime_list; temp_downtime != NULL; temp_downtime = temp_downtime->next) {
 				if(temp_downtime->type != SERVICE_DOWNTIME)
 					continue;
 				printf("<option value='%lu'>", temp_downtime->downtime_id);
-				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME);
+				get_time_string(&temp_downtime->start_time, start_time_str, sizeof(start_time_str), SHORT_DATE_TIME, TRUE, FALSE);
 				printf("ID: %lu, Service '%s' on host '%s' starting @ %s \n", temp_downtime->downtime_id, temp_downtime->service_description, temp_downtime->host_name, start_time_str);
 				}
 
@@ -1263,14 +1274,26 @@ void request_command_data(int cmd) {
 			printf("<tr><td CLASS='optBoxItem'><br></td></tr>\n");
 
 			time(&t);
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE, TRUE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
-			printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
+			if(enable_browser_local_timezone == TRUE) {
+				printf("<INPUT TYPE='TEXT' NAME='start_time'>");
+				/* add browser local timezone hidden <input> tag metadata */
+				printf("<INPUT TYPE='HIDDEN' NAME='start_time_browser_local_timezone' VALUE='%s'>", buffer);
+				}
+			else
+				printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
 			t += (unsigned long)7200;
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, TRUE, TRUE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
-			printf("<INPUT TYPE='TEXT' NAME='end_time' VALUE='%s'>", buffer);
+			if(enable_browser_local_timezone == TRUE) {
+				printf("<INPUT TYPE='TEXT' NAME='end_time'>");
+				/* add browser local timezone hidden <input> tag metadata */
+				printf("<INPUT TYPE='HIDDEN' NAME='end_time_browser_local_timezone' VALUE='%s'>", buffer);
+				}
+			else
+				printf("<INPUT TYPE='TEXT' NAME='end_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
 			printf("<tr><td CLASS='optBoxItem'>Type:</td><td><b>");
 			printf("<SELECT NAME='fixed'>");
@@ -1364,12 +1387,12 @@ void request_command_data(int cmd) {
 				}
 			print_comment_field(cmd);
 			time(&t);
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, FALSE, FALSE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>Start Time:</td><td><b>");
 			printf("<INPUT TYPE='TEXT' NAME='start_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
 			t += (unsigned long)7200;
-			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME);
+			get_time_string(&t, buffer, sizeof(buffer) - 1, SHORT_DATE_TIME, FALSE, FALSE);
 			printf("<tr><td CLASS='optBoxRequiredItem'>End Time:</td><td><b>");
 			printf("<INPUT TYPE='TEXT' NAME='end_time' VALUE='%s'>", buffer);
 			printf("</b></td></tr>\n");
@@ -2811,6 +2834,12 @@ int string_to_time(char *buffer, time_t *t) {
 	struct tm lt;
 	int ret = 0;
 
+	/* accept unix timestamp as input for browser local timezone support */
+	if(strlen(buffer) > 0 && strchr(buffer, '-') == NULL && strchr(buffer, ':') == NULL) {
+		*t = strtol(buffer, NULL, 10);
+		if(*t > (time_t)1500000000L && *t < LONG_MAX)
+			return OK;
+		}
 
 	/* Initialize some variables just in case they don't get parsed
 	   by the sscanf() call.  A better solution is to also check the
