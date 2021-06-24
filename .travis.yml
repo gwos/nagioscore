@@ -1,159 +1,153 @@
 language: c
-
 sudo: true
-
 matrix:
   include:
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          packages:
-            - apache2
-            - build-essential
-            - gcovr
-            - gperf
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=gcc && CXX=g++"
-
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - apache2
-            - build-essential
-            - gcovr
-            - gperf
-            - g++-5
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
-
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - apache2
-            - build-essential
-            - gcovr
-            - gperf
-            - g++-6
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
-
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - apache2
-            - build-essential
-            - gcovr
-            - gperf
-            - g++-7
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
-
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - apache2
-            - build-essential
-            - gcovr
-            - gperf
-            - g++-8
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
-
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-trusty-5.0
-          packages:
-            - apache2
-            - build-essential
-            - clang-5.0
-            - gcovr
-            - gperf
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
-
-    - os: linux
-      dist: trusty
-      addons:
-        apt:
-          sources:
-            - llvm-toolchain-trusty-6.0
-            - ubuntu-toolchain-r-test
-          packages:
-            - apache2
-            - build-essential
-            - clang-6.0
-            - gcovr
-            - gperf
-            - g++-4.9
-            - lcov
-            - libgd-dev
-            - php5
-            - php5-gd
-            - unzip
-            - valgrind
-      env:
-        - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
-
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc && CXX=g++"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-5
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-6
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-7
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-8
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - llvm-toolchain-trusty-5.0
+        packages:
+        - apache2
+        - build-essential
+        - clang-5.0
+        - gcovr
+        - gperf
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - llvm-toolchain-trusty-6.0
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - clang-6.0
+        - gcovr
+        - gperf
+        - g++-4.9
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
 before_install:
-  - eval "${MATRIX_EVAL}"
-
+- eval "${MATRIX_EVAL}"
 script:
-  - ./configure --enable-testing
-  - make test
-  - gcovr -r .
+- "./configure --enable-testing"
+- make test
+- gcovr -r .
+notifications:
+  slack:
+    rooms:
+      secure: K1Kcp4hGNoqtKN3JZQhsGYJNjBvCOoL7YicEx/2Q8IESsgxwi138CJr0e4ZAnXBP5QFjgZDZSeB0SUFtZcTCSostk03C2ylb8mudn2ruckkW3s2LEZk8ad1sWyFcrYX51tDkJfUlMSOP/VFnTo43PP1i8IkMmAIWpDT9tLprrz1YxpRvQbwmeelTN7YIuawGk9E4EOwxTXRdfPSqsw5av+Mjev3waf0VCbaaEiRHtB9+Sb9mgoNVS7xjqaRSGoU+JBbzERJqaq6dAPmwVVrsCvjU+qREh80PfRIh+j2XIpQx9TsS0Wx6Y88xfE89ypc+B0xXDOkYqChYDbKFQWRq53aaz/k+dTbK4SzbV0VwBKnpnst8+P+ghSABFlejZmrx51AEGKddDB/GhFRvPxBtxY5Pjuyr5zH2dq0l/y9sPvdUnnXvMJhJK8y7wAwZTgMGXsTpuAkB0DIRrwgf09D/YxaxdJgIfZxwzW9ihamma38uNZXQJ6VhPytcMMgSdewP9OMvj2IlfHC4svpg4X/RT/efTJfpz/dNkpa0I4Zwt+41XPnJFhM4GFaZCWOV0IfZyYiRXpJP1hadKyxLFJDyKsJP24BtI7i27n+xDxLijofHXLMEsRphGMwZiGGd/UYmtvefs5uRn9VJ/UtlFcz+TmAVNxkPM3ZADILoHwZx0s4=
