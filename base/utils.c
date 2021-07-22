@@ -242,6 +242,7 @@ check_result    *check_result_list_tail = NULL;
 #else
 check_result    *check_result_list = NULL;
 #endif
+int check_result_list_length = 0;
 time_t max_check_result_file_age;
 
 check_stats     check_statistics[MAX_CHECK_STATS_TYPES];
@@ -2370,8 +2371,10 @@ void save_queued_check_results(void) {
 #ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
 	check_result_list_head = NULL;
 	check_result_list_tail = NULL;
+	check_result_list_length = 0;
 #else
 	check_result_list = NULL;
+	check_result_list_length = 0;
 #endif
 
 #ifdef USE_EVENT_BROKER
@@ -2790,6 +2793,7 @@ check_result *read_check_result_double_list(void) {
 		else {
 			check_result_list_head->prev = NULL;
 			}
+		--check_result_list_length;
 		}
 
 #ifdef USE_EVENT_BROKER
@@ -2814,6 +2818,7 @@ check_result *read_check_result(check_result **listp) {
 	if(*listp != NULL) {
 		first_cr = *listp;
 		*listp = (*listp)->next;
+		--check_result_list_length;
 		}
 
 #ifdef USE_EVENT_BROKER
@@ -2922,6 +2927,8 @@ int add_check_result_to_double_list(check_result *new_cr) {
 		last_cr->prev = new_cr;
 		}
 
+	++check_result_list_length;
+
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
 	pthread_mutex_unlock(&check_result_list_lock);
@@ -2972,6 +2979,8 @@ int add_check_result_to_list(check_result **listp, check_result *new_cr) {
 		last_cr->next = new_cr;
 		}
 
+	++check_result_list_length;
+
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
 	pthread_mutex_unlock(&check_result_list_lock);
@@ -3002,6 +3011,7 @@ int free_check_result_double_list(void){
 
 	check_result_list_head=NULL;
 	check_result_list_tail=NULL;
+	check_result_list_length = 0;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
@@ -3032,6 +3042,7 @@ int free_check_result_list(check_result **listp) {
 		}
 
 	*listp = NULL;
+	check_result_list_length = 0;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
@@ -3059,6 +3070,64 @@ int free_check_result(check_result *info)
 
 	return OK;
 }
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_stats get_check_result_double_list_statistics()
+{
+	struct check_result_list_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		check_result_list_statistics.first_item_finish_time = check_result_list_head->finish_time;
+		check_result_list_statistics. last_item_finish_time = check_result_list_tail->finish_time;
+	}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
+
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_stats get_check_result_list_statistics(check_result **listp)
+{
+	struct check_result_list_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		// We have in hand only a pointer to the head of the list.
+		//
+		// We are not about to spend a lot of time walking the entire list to find the tail,
+		// just to retrieve this one piece of information.  That would cause O(n) behavior
+		// in retrieving statistics when we really want just O(1) behavior.  Therefore, we
+		// fake it by simply replicating the timestamp of the item at the head of the list,
+		// which is the more important (oldest-timestamp) value anyway.  We accept that as
+		// a practical limitation of operating with only a single-linked list.
+		check_result_list_statistics.first_item_finish_time = (*listp)->finish_time;
+		check_result_list_statistics. last_item_finish_time = (*listp)->finish_time;
+	}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
 
 
 /******************************************************************/

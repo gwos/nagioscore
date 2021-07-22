@@ -526,15 +526,27 @@ int close_command_file(void);					/* closes and deletes the external command fil
 void save_queued_check_results(void);
 
 #ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+
 int add_check_result_to_double_list(check_result *new_cr);
 #define ADD_ONE_CHECK_RESULT(dummy_check_result_list_ptr, check_result_ptr) add_check_result_to_double_list(check_result_ptr)
+
 check_result *read_check_result_double_list(void);		/* reads a host/service check result from the list in memory */
 #define READ_ONE_CHECK_RESULT(dummy_check_result_list_ptr) read_check_result_double_list()
+
+extern struct check_result_list_stats get_check_result_double_list_statistics();
+#define GET_CHECK_RESULT_LIST_STATS(dummy_check_result_list_ptr) get_check_result_double_list_statistics()
+
 #else
+
 int add_check_result_to_list(check_result **, check_result *);
 #define ADD_ONE_CHECK_RESULT(check_result_list_ptr, check_result_ptr) add_check_result_to_list(check_result_list_ptr, check_result_ptr)
+
 check_result *read_check_result(check_result **);		/* reads a host/service check result from the list in memory */
 #define READ_ONE_CHECK_RESULT(check_result_list_ptr) read_check_result(check_result_list_ptr)
+
+extern struct check_result_list_stats get_check_result_list_statistics(check_result **);
+#define GET_CHECK_RESULT_LIST_STATS(check_result_list_ptr) get_check_result_list_statistics(check_result_list_ptr)
+
 #endif
 
 
