@@ -182,6 +182,11 @@ typedef struct check_result {
 #endif
 	} check_result;
 
+struct check_result_list_stats {
+	int list_length;
+	struct timeval first_item_finish_time;
+	struct timeval  last_item_finish_time;
+};
 
 /* SCHED_INFO structure */
 typedef struct sched_info {
