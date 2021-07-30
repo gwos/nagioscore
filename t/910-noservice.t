@@ -17,4 +17,4 @@ my $precache = "$Bin/var/objects.precache";
 plan tests => 1;
 
 my $output = `$nagios -v "$etc/nagios-no-service.cfg"`;
-like( $output, "/Error: There are no services defined!/", "Correct error for no services" );
+like( $output, "/(Error|Warning): There are no services defined!/", "Correct error for no services" );
