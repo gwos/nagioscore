@@ -249,6 +249,12 @@ intmax_t clock_tick_nanoseconds;
 struct timespec check_result_list_count_start_time;
 time_t max_check_result_file_age;
 
+#define	MILLISECONDS_PER_SECOND		1000
+#define	MICROSECONDS_PER_MILLISECOND	1000
+#define	NANOSECONDS_PER_MICROSECOND	1000
+#define	NANOSECONDS_PER_MILLISECOND	(NANOSECONDS_PER_MICROSECOND * MICROSECONDS_PER_MILLISECOND)
+#define	NANOSECONDS_PER_SECOND		(NANOSECONDS_PER_MILLISECOND * MILLISECONDS_PER_SECOND)
+
 check_stats     check_statistics[MAX_CHECK_STATS_TYPES];
 
 char *debug_file;

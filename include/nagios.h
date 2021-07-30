@@ -526,8 +526,12 @@ int add_check_result_to_double_list(check_result *new_cr);
 check_result *read_check_result_double_list(void);		/* reads a host/service check result from the list in memory */
 #define READ_ONE_CHECK_RESULT(dummy_check_result_list_ptr) read_check_result_double_list()
 
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
 extern struct check_result_list_stats get_check_result_double_list_statistics();
 #define GET_CHECK_RESULT_LIST_STATS(dummy_check_result_list_ptr) get_check_result_double_list_statistics()
+
+extern struct check_result_list_full_stats get_check_result_double_list_full_statistics();
+#define GET_CHECK_RESULT_LIST_FULL_STATS(dummy_check_result_list_ptr) get_check_result_double_list_full_statistics()
 
 #else
 
@@ -537,8 +541,12 @@ int add_check_result_to_list(check_result **, check_result *);
 check_result *read_check_result(check_result **);		/* reads a host/service check result from the list in memory */
 #define READ_ONE_CHECK_RESULT(check_result_list_ptr) read_check_result(check_result_list_ptr)
 
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
 extern struct check_result_list_stats get_check_result_list_statistics(check_result **);
 #define GET_CHECK_RESULT_LIST_STATS(check_result_list_ptr) get_check_result_list_statistics(check_result_list_ptr)
+
+extern struct check_result_list_full_stats get_check_result_list_full_statistics(check_result **);
+#define GET_CHECK_RESULT_LIST_FULL_STATS(check_result_list_ptr) get_check_result_list_full_statistics(check_result_list_ptr)
 
 #endif
 
