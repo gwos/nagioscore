@@ -24,6 +24,7 @@
 #ifndef NAGIOS_OBJECTS_H_INCLUDED
 #define NAGIOS_OBJECTS_H_INCLUDED
 
+#include <stdint.h>
 #include "common.h"
 
 NAGIOS_BEGIN_DECL
