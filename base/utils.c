@@ -243,6 +243,10 @@ check_result    *check_result_list_tail = NULL;
 check_result    *check_result_list = NULL;
 #endif
 int check_result_list_length = 0;
+intmax_t check_result_list_ingress_count = 0;
+intmax_t check_result_list_egress_count  = 0;
+intmax_t clock_tick_nanoseconds;
+struct timespec check_result_list_count_start_time;
 time_t max_check_result_file_age;
 
 check_stats     check_statistics[MAX_CHECK_STATS_TYPES];
@@ -448,6 +452,22 @@ void init_main_cfg_vars(int first_time) {
 
 	ocsp_command = NULL;
 	ochp_command = NULL;
+
+	if(first_time) {
+		check_result_list_ingress_count = 0;
+		check_result_list_egress_count  = 0;
+
+		// Presently, we ignore the possibility that CLOCK_MONOTONIC_RAW might not be supported on
+		// a given platform.  Sufficiently-recent Linux kernels should be just fine in that regard.
+
+		struct timespec one_clock_tick;
+		clock_getres(CLOCK_MONOTONIC_RAW, &one_clock_tick);
+		clock_tick_nanoseconds = one_clock_tick.tv_sec * (intmax_t) NANOSECONDS_PER_SECOND + one_clock_tick.tv_nsec;
+
+		struct timespec now;
+		clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+		check_result_list_count_start_time = now;
+	}
 
 	return;
 	}
@@ -2786,6 +2806,7 @@ check_result *read_check_result_double_list(void) {
 			check_result_list_head->prev = NULL;
 			}
 		--check_result_list_length;
+		++check_result_list_egress_count;
 		}
 
 #ifdef USE_EVENT_BROKER
@@ -2811,6 +2832,7 @@ check_result *read_check_result(check_result **listp) {
 		first_cr = *listp;
 		*listp = (*listp)->next;
 		--check_result_list_length;
+		++check_result_list_egress_count;
 		}
 
 #ifdef USE_EVENT_BROKER
@@ -2920,6 +2942,7 @@ int add_check_result_to_double_list(check_result *new_cr) {
 		}
 
 	++check_result_list_length;
+	++check_result_list_ingress_count;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
@@ -2972,6 +2995,7 @@ int add_check_result_to_list(check_result **listp, check_result *new_cr) {
 		}
 
 	++check_result_list_length;
+	++check_result_list_ingress_count;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */
@@ -3063,6 +3087,7 @@ int free_check_result(check_result *info)
 	return OK;
 }
 
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
 #ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
 struct check_result_list_stats get_check_result_double_list_statistics()
 {
@@ -3088,6 +3113,7 @@ struct check_result_list_stats get_check_result_double_list_statistics()
 }
 #endif
 
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
 #ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
 struct check_result_list_stats get_check_result_list_statistics(check_result **listp)
 {
@@ -3111,6 +3137,110 @@ struct check_result_list_stats get_check_result_list_statistics(check_result **l
 		check_result_list_statistics.first_item_finish_time = (*listp)->finish_time;
 		check_result_list_statistics. last_item_finish_time = (*listp)->finish_time;
 	}
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
+
+#ifdef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_full_stats get_check_result_double_list_full_statistics()
+{
+	struct check_result_list_full_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		check_result_list_statistics.first_item_finish_time = check_result_list_head->finish_time;
+		check_result_list_statistics. last_item_finish_time = check_result_list_tail->finish_time;
+	}
+
+	check_result_list_statistics.ingress_count = check_result_list_ingress_count;
+	check_result_list_statistics. egress_count = check_result_list_egress_count;
+
+	// We would have preferred to obtain the time using gethrtime(), as is available on
+	// Solaris and HP-UX.  That provides the raw timestamp directly as a 64-bit integer,
+	// expressed in nanoseconds.  As such, it would be much more efficient to compute
+	// with.  But Linux does not provide that call, so we have to make do with what we
+	// have available.  For more on accurate timing, see:
+	// https://www.circonus.com/2016/09/time-but-faster/
+	// https://github.com/circonus-labs/libmtev
+	// https://github.com/circonus-labs/libmtev/blob/master/src/utils/mtev_time.c
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+	check_result_list_statistics.counts_duration_nanoseconds =
+		(now.tv_sec  - check_result_list_count_start_time.tv_sec) * (intmax_t) NANOSECONDS_PER_SECOND +
+		(now.tv_nsec - check_result_list_count_start_time.tv_nsec);
+	// The clock we probe might not actually have nanosecond resolution.  So we graciously prevent
+	// downstream divide-by-zero errors, and don't use an inaccurate zero time when such a division is
+	// inverted, even though the results in either case are likely to be off from their true values.
+	if (check_result_list_statistics.counts_duration_nanoseconds == 0) {
+		check_result_list_statistics.counts_duration_nanoseconds = clock_tick_nanoseconds;
+	}
+
+	// The next time we return counts, they will only be incremental from this point.
+	check_result_list_ingress_count = 0;
+	check_result_list_egress_count  = 0;
+	check_result_list_count_start_time = now;
+
+#ifdef USE_EVENT_BROKER
+	/* Relinquish the check result list mutex */
+	pthread_mutex_unlock(&check_result_list_lock);
+#endif
+
+	return check_result_list_statistics;
+}
+#endif
+
+#ifndef USE_CHECK_RESULT_DOUBLE_LINKED_LIST
+struct check_result_list_full_stats get_check_result_list_full_statistics(check_result **listp)
+{
+	struct check_result_list_full_stats check_result_list_statistics;
+
+#ifdef USE_EVENT_BROKER
+	/* Acquire the check result list mutex */
+	pthread_mutex_lock(&check_result_list_lock);
+#endif
+
+	check_result_list_statistics.list_length = check_result_list_length;
+	if (check_result_list_statistics.list_length > 0) {
+		// We have in hand only a pointer to the head of the list.
+		//
+		// We are not about to spend a lot of time walking the entire list to find the tail,
+		// just to retrieve this one piece of information.  That would cause O(n) behavior
+		// in retrieving statistics when we really want just O(1) behavior.  Therefore, we
+		// fake it by simply replicating the timestamp of the item at the head of the list,
+		// which is the more important (oldest-timestamp) value anyway.  We accept that as
+		// a practical limitation of operating with only a single-linked list.
+		check_result_list_statistics.first_item_finish_time = (*listp)->finish_time;
+		check_result_list_statistics. last_item_finish_time = (*listp)->finish_time;
+	}
+
+	check_result_list_statistics.ingress_count = check_result_list_ingress_count;
+	check_result_list_statistics. egress_count = check_result_list_egress_count;
+
+	// See get_check_result_double_list_full_statistics() above for further comments.
+	struct timespec now;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+	check_result_list_statistics.counts_duration_nanoseconds =
+		(now.tv_sec  - check_result_list_count_start_time.tv_sec) * (intmax_t) NANOSECONDS_PER_SECOND +
+		(now.tv_nsec - check_result_list_count_start_time.tv_nsec);
+	if (check_result_list_statistics.counts_duration_nanoseconds == 0) {
+		check_result_list_statistics.counts_duration_nanoseconds = clock_tick_nanoseconds;
+	}
+
+	// The next time we return counts, they will only be incremental from this point.
+	check_result_list_ingress_count = 0;
+	check_result_list_egress_count  = 0;
+	check_result_list_count_start_time = now;
 
 #ifdef USE_EVENT_BROKER
 	/* Relinquish the check result list mutex */

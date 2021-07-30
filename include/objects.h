@@ -24,6 +24,7 @@
 #ifndef NAGIOS_OBJECTS_H_INCLUDED
 #define NAGIOS_OBJECTS_H_INCLUDED
 
+#include <stdint.h>
 #include "common.h"
 
 NAGIOS_BEGIN_DECL
@@ -109,6 +110,13 @@ NAGIOS_BEGIN_DECL
 #define NUDGE_MIN	5
 #define NUDGE_MAX	17
 
+/* Time-related macros */
+#define	MILLISECONDS_PER_SECOND		1000
+#define	MICROSECONDS_PER_MILLISECOND	1000
+#define	NANOSECONDS_PER_MICROSECOND	1000
+#define	NANOSECONDS_PER_MILLISECOND	(NANOSECONDS_PER_MICROSECOND * MICROSECONDS_PER_MILLISECOND)
+#define	NANOSECONDS_PER_SECOND		(NANOSECONDS_PER_MILLISECOND * MILLISECONDS_PER_SECOND)
+
 /****************** DATA STRUCTURES *******************/
 
 /* @todo Remove typedef's of non-opaque types in Nagios 5 */
@@ -182,10 +190,20 @@ typedef struct check_result {
 #endif
 	} check_result;
 
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
 struct check_result_list_stats {
 	int list_length;
 	struct timeval first_item_finish_time;
 	struct timeval  last_item_finish_time;
+};
+
+struct check_result_list_full_stats {
+	int list_length;
+	struct timeval first_item_finish_time;
+	struct timeval  last_item_finish_time;
+	intmax_t ingress_count;
+	intmax_t  egress_count;
+	intmax_t counts_duration_nanoseconds;
 };
 
 /* SCHED_INFO structure */
