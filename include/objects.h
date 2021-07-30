@@ -182,10 +182,20 @@ typedef struct check_result {
 #endif
 	} check_result;
 
+// Obsolete, to be removed once we have converted over to using check_result_list_full_stats instead.
 struct check_result_list_stats {
 	int list_length;
 	struct timeval first_item_finish_time;
 	struct timeval  last_item_finish_time;
+};
+
+struct check_result_list_full_stats {
+	int list_length;
+	struct timeval first_item_finish_time;
+	struct timeval  last_item_finish_time;
+	intmax_t ingress_count;
+	intmax_t  egress_count;
+	intmax_t counts_duration_nanoseconds;
 };
 
 /* SCHED_INFO structure */
