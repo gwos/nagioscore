@@ -204,7 +204,7 @@ void setup_environment()
     }
 
     my_free(website_url);
-    website_url = strdup("https://nagios.com");
+    website_url = strdup("https://nagios.com/cgi-bin");
 }
 
 #define RUN_MACRO_TEST(_STR, _EXPECT, _OPTS)                                                        \
