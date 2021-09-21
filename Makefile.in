@@ -288,7 +288,7 @@ install-unstripped:
 	$(MAKE) install-basic
 
 install-basic:
-	$(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(TMPDIR)
+	if [ '$(DESTDIR)$(TMPDIR)' != /tmp ]; then $(INSTALL) -m 755 $(INSTALL_OPTS) -d $(DESTDIR)$(TMPDIR); fi
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LIBEXECDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LOGDIR)
 	$(INSTALL) -m 775 $(INSTALL_OPTS) -d $(DESTDIR)$(LOGDIR)/archives
