@@ -670,15 +670,6 @@ static inline int service_is_passive(service *svc, check_result *cr)
 	/* update check statistics for passive checks */
 	update_check_stats(PASSIVE_SERVICE_CHECK_STATS, cr->start_time.tv_sec);
 
-	/* log passive checks - we need to do this here, as some may bypass external commands by getting dropped in checkresults dir */
-	if (log_passive_checks == TRUE) {
-		logit(NSLOG_PASSIVE_CHECK, FALSE, "PASSIVE SERVICE CHECK: %s;%s;%d;%s\n", 
-			svc->host_name, 
-			svc->description, 
-			svc->current_state, 
-			svc->plugin_output);
-	}
-
 	return TRUE;
 }
 /*****************************************************************************/
@@ -697,15 +688,6 @@ static inline int host_is_passive(host *hst, check_result *cr)
 
 	/* update check stats for passive checks */
 	update_check_stats(PASSIVE_HOST_CHECK_STATS, cr->start_time.tv_sec);
-
-	/* log passive checks - we need to do this here as some may bypass external commands by getting dropped in checkresults dir */
-	/* todo - check if current_state is right - i don't think it is! */
-	if (log_passive_checks == TRUE) {
-		logit(NSLOG_PASSIVE_CHECK, FALSE, "PASSIVE HOST CHECK: %s;%d;%s\n", 
-			hst->name, 
-			hst->current_state, 
-			hst->plugin_output);
-	}
 
 	return TRUE;
 }
@@ -1275,6 +1257,17 @@ int handle_async_service_check_result(service *svc, check_result *cr)
 	debug_async_service(svc, cr);
 	service_fresh_check(svc, cr, current_time);
 	service_initial_handling(svc, cr, &old_plugin_output);
+
+	/* log passive checks - we need to do this here, as some may bypass external commands by getting dropped in checkresults dir */
+	if (svc->check_type == CHECK_TYPE_PASSIVE) {
+		if (log_passive_checks == TRUE) {
+			logit(NSLOG_PASSIVE_CHECK, FALSE, "PASSIVE SERVICE CHECK: %s;%s;%d;%s\n", 
+				svc->host_name, 
+				svc->description, 
+				svc->current_state, 
+				svc->plugin_output);
+		}
+	}
 
 	/* reschedule the next check at the regular interval - may be overridden */
 	next_check = (time_t)(svc->last_check + (svc->check_interval * interval_length));
@@ -2313,6 +2306,16 @@ int handle_async_host_check_result(host *hst, check_result *cr)
 	debug_async_host(hst, cr);
 	host_fresh_check(hst, cr, current_time);
 	host_initial_handling(hst, cr, &old_plugin_output);
+
+	/* log passive checks - we need to do this here, as some may bypass external commands by getting dropped in checkresults dir */
+	if (hst->check_type == CHECK_TYPE_PASSIVE) {
+		if (log_passive_checks == TRUE) {
+			logit(NSLOG_PASSIVE_CHECK, FALSE, "PASSIVE HOST CHECK: %s;%d;%s\n", 
+				hst->name, 
+				hst->current_state, 
+				hst->plugin_output);
+		}
+	}
 
 	/* reschedule the next check at the regular interval - may be overridden */
 	next_check = (time_t)(hst->last_check + (hst->check_interval * interval_length));
