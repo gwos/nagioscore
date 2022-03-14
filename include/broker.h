@@ -97,6 +97,9 @@
 #define NEBTYPE_SERVICECHECK_RAW_START           702   /* NOT IMPLEMENTED */
 #define NEBTYPE_SERVICECHECK_RAW_END             703   /* NOT IMPLEMENTED */
 #define NEBTYPE_SERVICECHECK_ASYNC_PRECHECK      704
+#ifdef PASS_UNPROCESSED_STATES
+#define NEBTYPE_SERVICECHECK_UNPROCESSED         750   /* immediately before a service check result gets processed */
+#endif
 
 #define NEBTYPE_HOSTCHECK_INITIATE               800   /* a check of the route to the host has been initiated */
 #define NEBTYPE_HOSTCHECK_PROCESSED              801   /* the processed/final result of a host check */
@@ -104,6 +107,9 @@
 #define NEBTYPE_HOSTCHECK_RAW_END                803   /* a finished "raw" host check */
 #define NEBTYPE_HOSTCHECK_ASYNC_PRECHECK         804
 #define NEBTYPE_HOSTCHECK_SYNC_PRECHECK          805
+#ifdef PASS_UNPROCESSED_STATES
+#define NEBTYPE_HOSTCHECK_UNPROCESSED            850   /* immediately before a host check result gets processed */
+#endif
 
 #define NEBTYPE_COMMENT_ADD                      900
 #define NEBTYPE_COMMENT_DELETE                   901
@@ -186,6 +192,10 @@ void broker_timed_event(int, int, int, timed_event *, struct timeval *);
 void broker_log_data(int, int, int, char *, unsigned long, time_t, struct timeval *);
 int broker_event_handler(int, int, int, int, void *, int, int, struct timeval, struct timeval, double, int, int, int, char *, char *, char *, struct timeval *);
 void broker_system_command(int, int, int, struct timeval, struct timeval, double, int, int, int, char *, char *, struct timeval *);
+#ifdef PASS_UNPROCESSED_STATES
+void broker_host_data(int, int, int, host *, int, struct timeval *, check_result *);
+void broker_service_data(int, int, int, service *, int, struct timeval *, check_result *);
+#endif
 int broker_host_check(int, int, int, host *, int, int, int, struct timeval, struct timeval, char *, double, double, int, int, int, char *, char *, char *, char *, struct timeval *, check_result *);
 int broker_service_check(int, int, int, service *, int, struct timeval, struct timeval, char *, double, double, int, int, int, char *, struct timeval *, check_result *);
 void broker_comment_data(int, int, int, int, int, char *, char *, time_t, char *, char *, int, int, int, time_t, unsigned long, struct timeval *);
