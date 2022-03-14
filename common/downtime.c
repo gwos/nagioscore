@@ -603,7 +603,7 @@ int handle_scheduled_downtime(scheduled_downtime *temp_downtime) {
 		/* decrement the downtime depth variable */
 		if(temp_downtime->type == HOST_DOWNTIME && hst->scheduled_downtime_depth > 0)
 			hst->scheduled_downtime_depth--;
-		else if (svc->scheduled_downtime_depth > 0)
+		else if (temp_downtime->type == SERVICE_DOWNTIME && svc->scheduled_downtime_depth > 0)
 			svc->scheduled_downtime_depth--;
 
 		if(temp_downtime->type == HOST_DOWNTIME && hst->scheduled_downtime_depth == 0) {

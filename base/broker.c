@@ -212,6 +212,71 @@ int broker_event_handler(int type, int flags, int attr, int eventhandler_type, v
 
 
 
+#ifdef PASS_UNPROCESSED_STATES
+/*
+** broker_host_data() exists for one reason only:  to pass host data to event brokers immediately before
+** host-check result data is processed, so the event brokers have an easy mechanism to capture some parts
+** of that data and later identify exactly what has changed as a result of host-check processing.  To
+** that end, the "type" field of this call should always be NEBTYPE_HOSTCHECK_UNPROCESSED, so the event
+** broker can distinguish this sub-type from other NEBCALLBACK_HOST_CHECK_DATA calls.
+**
+** broker_host_data() is much like broker_host_status() in that it effectively passes current host data
+** to the event broker, but with minimal extra data attached in the call.  Instead, it relies on the
+** event broker to walk the Nagios data structures to pick up whatever information it needs.
+**
+** broker_host_data() is like broker_host_check() in that it passes the same nebstruct_host_check_data
+** data structure to the event broker.  However, in order to be most efficient in this call, which will
+** likely occur with high frequency, almost none of the fields in that data structure are filled in.  The
+** only fields the event broker can count on are the usual overhead fields for all event-broker calls,
+** the object_ptr and check_type fields, and the check_result_ptr field.  The object_ptr field is set as
+** you would expect, and it will be the primary point of departure for the event broker's exploration of
+** Nagios data structures.  The check_type field is provided because by the time that broker_host_data()
+** is called, the hst->check_type field has already been updated to reflect the check_type of the host
+** check result that is about to be processed.  So we provide the pre-existing value of the check_type
+** field, that was in place just before the hst->check_type field was updated.  The check_result_ptr
+** field is provided for generality, in case the event broker needs to peek ahead at new data that has
+** not yet been applied to the host.  Passing along the check result is not expected to add any value
+** for the initially envisaged usage of this broker call, but one might imagine it could be useful in
+** the future, and it is inexpensive to provide in the first implementation.  All other values in the
+** nebstruct_host_check_data structure contain random bits and are not to be trusted in any way by the
+** event broker.  If this ever changes, we would need to have the calling code indicate the kinds of
+** fields that are otherwise being provided, by setting either the flags or attr field to some special
+** value that in some way indicates which additional fields are valid.
+**
+** The reason we implement this admixture of two different broker calls this way is because (a) we didn't
+** want to define yet another callback type, (b) we didn't want to define yet another Nagios callback
+** data structure, and (c) we didn't want to spend the extra work to populate lots of fields that the
+** event broker already has access to in existing Nagios data structures, through the object_ptr field.
+*/
+/* send current host data to broker */
+void broker_host_data(int type, int flags, int attr, host *hst, int check_type, struct timeval *timestamp, check_result *cr) {
+	nebstruct_host_check_data ds;
+
+	if(!(event_broker_options & BROKER_HOST_CHECKS))
+		return;
+
+	if(hst == NULL)
+		return;
+
+	/* fill struct with relevant data */
+	ds.type = type;
+	ds.flags = flags;
+	ds.attr = attr;
+	ds.timestamp = get_broker_timestamp(timestamp);
+
+	ds.object_ptr = (void *)hst;
+	ds.check_type = check_type;
+	ds.check_result_ptr = cr;
+
+	/* make callbacks */
+	neb_make_callbacks(NEBCALLBACK_HOST_CHECK_DATA, (void *)&ds);
+
+	return;
+	}
+#endif
+
+
+
 /* send host check data to broker */
 int broker_host_check(int type, int flags, int attr, host *hst, int check_type, int state, int state_type, struct timeval start_time, struct timeval end_time, char *cmd, double latency, double exectime, int timeout, int early_timeout, int retcode, char *cmdline, char *output, char *long_output, char *perfdata, struct timeval *timestamp, check_result *cr) {
 	char *command_buf = NULL;
@@ -269,6 +334,71 @@ int broker_host_check(int type, int flags, int attr, host *hst, int check_type, 
 
 	return return_code;
 	}
+
+
+
+#ifdef PASS_UNPROCESSED_STATES
+/*
+** broker_service_data() exists for one reason only:  to pass service data to event brokers immediately before
+** service-check result data is processed, so the event brokers have an easy mechanism to capture some parts
+** of that data and later identify exactly what has changed as a result of service-check processing.  To
+** that end, the "type" field of this call should always be NEBTYPE_SERVICECHECK_UNPROCESSED, so the event
+** broker can distinguish this sub-type from other NEBCALLBACK_SERVICE_CHECK_DATA calls.
+**
+** broker_service_data() is much like broker_service_status() in that it effectively passes current service data
+** to the event broker, but with minimal extra data attached in the call.  Instead, it relies on the
+** event broker to walk the Nagios data structures to pick up whatever information it needs.
+**
+** broker_service_data() is like broker_service_check() in that it passes the same nebstruct_service_check_data
+** data structure to the event broker.  However, in order to be most efficient in this call, which will
+** likely occur with high frequency, almost none of the fields in that data structure are filled in.  The
+** only fields the event broker can count on are the usual overhead fields for all event-broker calls,
+** the object_ptr and check_type fields, and the check_result_ptr field.  The object_ptr field is set as
+** you would expect, and it will be the primary point of departure for the event broker's exploration of
+** Nagios data structures.  The check_type field is provided because by the time that broker_service_data()
+** is called, the svc->check_type field has already been updated to reflect the check_type of the service
+** check result that is about to be processed.  So we provide the pre-existing value of the check_type
+** field, that was in place just before the svc->check_type field was updated.  The check_result_ptr
+** field is provided for generality, in case the event broker needs to peek ahead at new data that has
+** not yet been applied to the service.  Passing along the check result is not expected to add any value
+** for the initially envisaged usage of this broker call, but one might imagine it could be useful in
+** the future, and it is inexpensive to provide in the first implementation.  All other values in the
+** nebstruct_service_check_data structure contain random bits and are not to be trusted in any way by the
+** event broker.  If this ever changes, we would need to have the calling code indicate the kinds of
+** fields that are otherwise being provided, by setting either the flags or attr field to some special
+** value that in some way indicates which additional fields are valid.
+**
+** The reason we implement this admixture of two different broker calls this way is because (a) we didn't
+** want to define yet another callback type, (b) we didn't want to define yet another Nagios callback
+** data structure, and (c) we didn't want to spend the extra work to populate lots of fields that the
+** event broker already has access to in existing Nagios data structures, through the object_ptr field.
+*/
+/* send current service data to broker */
+void broker_service_data(int type, int flags, int attr, service *svc, int check_type, struct timeval *timestamp, check_result *cr) {
+	nebstruct_service_check_data ds;
+
+	if(!(event_broker_options & BROKER_SERVICE_CHECKS))
+		return;
+
+	if(svc == NULL)
+		return;
+
+	/* fill struct with relevant data */
+	ds.type = type;
+	ds.flags = flags;
+	ds.attr = attr;
+	ds.timestamp = get_broker_timestamp(timestamp);
+
+	ds.object_ptr = (void *)svc;
+	ds.check_type = check_type;
+	ds.check_result_ptr = cr;
+
+	/* make callbacks */
+	neb_make_callbacks(NEBCALLBACK_SERVICE_CHECK_DATA, (void *)&ds);
+
+	return;
+	}
+#endif
 
 
 

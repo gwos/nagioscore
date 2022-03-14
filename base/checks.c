@@ -1243,6 +1243,11 @@ int handle_async_service_check_result(service *svc, check_result *cr)
 
 	int new_last_hard_state	       = svc->last_hard_state;
 
+#if defined(USE_EVENT_BROKER) && defined(PASS_UNPROCESSED_STATES)
+	/* This one piece of data is saved away because service_is_passive() and service_is_active() modify this one field. */
+	int old_check_type = svc->check_type;
+#endif
+
 	if (cr->check_type == CHECK_TYPE_PASSIVE) {
 		if (service_is_passive(svc, cr) == FALSE) {
 			return ERROR;
@@ -1251,6 +1256,10 @@ int handle_async_service_check_result(service *svc, check_result *cr)
 	else {
 		service_is_active(svc);
 	}
+
+#if defined(USE_EVENT_BROKER) && defined(PASS_UNPROCESSED_STATES)
+	broker_service_data(NEBTYPE_SERVICECHECK_UNPROCESSED, NEBFLAG_NONE, NEBATTR_NONE, svc, old_check_type, NULL, cr);
+#endif
 
 	time(&current_time);
 	initialize_last_service_state_change_times(svc, hst);
@@ -2295,6 +2304,11 @@ int handle_async_host_check_result(host *hst, check_result *cr)
 
 	int new_last_hard_state	 = hst->last_hard_state;
 
+#if defined(USE_EVENT_BROKER) && defined(PASS_UNPROCESSED_STATES)
+	/* This one piece of data is saved away because host_is_passive() and host_is_active() modify this one field. */
+	int old_check_type = hst->check_type;
+#endif
+
 	if (cr->check_type == CHECK_TYPE_PASSIVE) {
 		if (host_is_passive(hst, cr) == FALSE) {
 			return ERROR;
@@ -2303,6 +2317,11 @@ int handle_async_host_check_result(host *hst, check_result *cr)
 	else  {
 		host_is_active(hst);
 	}
+
+#if defined(USE_EVENT_BROKER) && defined(PASS_UNPROCESSED_STATES)
+	broker_host_data(NEBTYPE_HOSTCHECK_UNPROCESSED, NEBFLAG_NONE, NEBATTR_NONE, hst, old_check_type, NULL, cr);
+#endif
+
 	time(&current_time);
 	initialize_last_host_state_change_times(hst);
 
@@ -3234,6 +3253,7 @@ int run_async_host_check(host *hst, int check_options, double latency, int sched
 	if (raw_command == NULL) {
 		clear_volatile_macros_r(&mac);
 		log_debug_info(DEBUGL_CHECKS, 0, "Raw check command for host '%s' was NULL - aborting.\n", hst->name);
+		hst->latency = old_latency;
 		return ERROR;
 	}
 
@@ -3243,6 +3263,7 @@ int run_async_host_check(host *hst, int check_options, double latency, int sched
 	if (processed_command == NULL) {
 		clear_volatile_macros_r(&mac);
 		log_debug_info(DEBUGL_CHECKS, 0, "Processed check command for host '%s' was NULL - aborting.\n", hst->name);
+		hst->latency = old_latency;
 		return ERROR;
 	}
 
@@ -3254,6 +3275,7 @@ int run_async_host_check(host *hst, int check_options, double latency, int sched
 		log_debug_info(DEBUGL_CHECKS, 0, "Failed to allocate checkresult struct\n");
 		clear_volatile_macros_r(&mac);
 		clear_host_macros_r(&mac);
+		hst->latency = old_latency;
 		return ERROR;
 	}
 	init_check_result(cr);
