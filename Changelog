@@ -2,8 +2,7 @@
 Nagios Core 4 Change Log
 ########################
 
-<<<<<<< Upstream, based on 73a6b070e46c63aa6e2be731133c1b078cbee35c
-4.4.7 - 2021-04-11
+4.4.7 - 2022-04-11
 ------------------
 FIXES 
 * Fixed checkboxes in jsonquery.html (#778) (Rfferrao87)
@@ -11,12 +10,8 @@ FIXES
 * Note: NEB modules using the priority/scheduling queues in libnagios may need to update headers due to symbol conflicts with OpenSSL.
 * Fixed XSS in homepage when displaying update check results (Sebastian Wolf)
 * Fixed allocation error in getcgi.c (#820) (Ariadne Conill)
-=======
-4.4.7 - 2021-??-??
-------------------
-FIXES
 * Fixed Error: NULL variable for lines of spaces in resource.cfg (#814) (Ralf Herrmann)
->>>>>>> 765f9f6 Fixes #814 Error NULL variable for line of spaces in resource.cfg
+* Fixed crash when handling large check output (#825, #828) (Kilvador)
 
 4.4.6 - 2020-04-28
 ------------------
