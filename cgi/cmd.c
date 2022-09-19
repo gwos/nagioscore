@@ -736,7 +736,7 @@ void request_command_data(int cmd) {
 	if(temp_contact != NULL && temp_contact->alias != NULL)
 		comment_author = temp_contact->alias;
 	else
-		comment_author = current_authdata.username;
+		comment_author = url_decode_string(current_authdata.username);
 
 
 	printf("<P><DIV ALIGN=CENTER CLASS='cmdType'>You are requesting to ");
@@ -1524,7 +1524,7 @@ void commit_command_data(int cmd) {
 			comment_author = temp_contact->alias;
 		}
 		else {
-			comment_author = current_authdata.username;
+			comment_author = url_decode_string(current_authdata.username);
 		}
 	}
 
