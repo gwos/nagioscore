@@ -472,6 +472,7 @@ void get_interval_time_string(double, char *, int);		/* gets a time string for a
 const char *url_encode(const char *);		        		/* encodes a string in proper URL format */
 char *html_encode(char *, int);					/* encodes a string in HTML format (for what the user sees) */
 char *escape_string(const char *);					/* escape string for html form usage */
+char *url_decode_string(const char *);					/* url decode string for UI usage */
 
 void get_log_archive_to_use(int, char *, int);			/* determines the name of the log archive to use */
 void determine_log_rotation_times(int);
