@@ -1499,6 +1499,7 @@ char *url_decode_string(const char *input) {
 	int		len;
 	const char	*istp;
 	char		*ostp;
+	int		decoded;
 	char		*output;
 
 	if(NULL == input)
@@ -1512,8 +1513,11 @@ char *url_decode_string(const char *input) {
 		   (((*(istp + 1) >= '0') && (*(istp + 1) <= '9')) || ((*(istp + 1) >= 'A') && (*(istp + 1) <= 'F'))) &&
 		   (((*(istp + 2) >= '0') && (*(istp + 2) <= '9')) || ((*(istp + 2) >= 'A') && (*(istp + 2) <= 'F')))) {
 			istp++;
-			*ostp++ = (char)((-(int)((*istp >= 'A') ? '7' : '0') + (int)*istp++) * 16 +
-					 -(int)((*istp >= 'A') ? '7' : '0') + (int)*istp++);
+			decoded = (int)*istp - (int)((*istp >= 'A') ? '7' : '0');
+			istp++;
+			decoded = decoded * 16 + (int)*istp - (int)((*istp >= 'A') ? '7' : '0');
+			istp++;
+			*ostp++ = (char)decoded;
 		} else {
 			*ostp++ = *istp++;
 		}
