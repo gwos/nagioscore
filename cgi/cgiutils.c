@@ -1546,6 +1546,9 @@ char *url_decode_string(const char *input) {
 			decoded = decoded * 16 + (int)*istp - (int)((*istp >= 'A') ? '7' : '0');
 			istp++;
 			*ostp++ = (char)decoded;
+		} else if(*istp == '+') {
+			*ostp++ = ' ';
+			istp++;
 		} else {
 			*ostp++ = *istp++;
 		}
