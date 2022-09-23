@@ -1494,6 +1494,41 @@ char *escape_string(const char *input) {
 	}
 
 
+/* url decode string for UI usage */
+char *url_decode_string(const char *input) {
+	int		len;
+	const char	*istp;
+	char		*ostp;
+	int		decoded;
+	char		*output;
+
+	if(NULL == input)
+		return "";
+	len = (int)strlen(input);
+	if((ostp = output = (char *)malloc(len + 1)) == NULL)
+		return "";
+	istp = input;
+	do {
+		if((*istp == '%') &&
+		   (((*(istp + 1) >= '0') && (*(istp + 1) <= '9')) || ((*(istp + 1) >= 'A') && (*(istp + 1) <= 'F'))) &&
+		   (((*(istp + 2) >= '0') && (*(istp + 2) <= '9')) || ((*(istp + 2) >= 'A') && (*(istp + 2) <= 'F')))) {
+			istp++;
+			decoded = (int)*istp - (int)((*istp >= 'A') ? '7' : '0');
+			istp++;
+			decoded = decoded * 16 + (int)*istp - (int)((*istp >= 'A') ? '7' : '0');
+			istp++;
+			*ostp++ = (char)decoded;
+		} else if(*istp == '+') {
+			*ostp++ = ' ';
+			istp++;
+		} else {
+			*ostp++ = *istp++;
+		}
+	} while(*(ostp - 1) != '\0');
+	return output;
+}
+
+
 /* determines the log file we should use (from current time) */
 void get_log_archive_to_use(int archive, char *buffer, int buffer_length) {
 	struct tm *t;
@@ -1677,7 +1712,7 @@ void display_info_table(const char *title, int refresh, authdata *current_authda
 	printf("Nagios&reg; Core&trade; %s - <A HREF='https://www.nagios.org' TARGET='_new' CLASS='homepageURL'>www.nagios.org</A><BR>\n", PROGRAM_VERSION);
 
 	if(current_authdata != NULL)
-		printf("Logged in as <i>%s</i><BR>\n", (!strcmp(current_authdata->username, "")) ? "?" : current_authdata->username);
+		printf("Logged in as <i>%s</i><BR>\n", (!strcmp(current_authdata->username, "")) ? "?" : url_decode_string(current_authdata->username));
 
 	if(nagios_process_state != STATE_OK)
 		printf("<DIV CLASS='infoBoxBadProcStatus'>Warning: Monitoring process may not be running!<BR>Click <A HREF='%s?type=%d'>here</A> for more info.</DIV>", EXTINFO_CGI, DISPLAY_PROCESS_INFO);
