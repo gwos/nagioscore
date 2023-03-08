@@ -2,6 +2,7 @@ language: c
 sudo: true
 matrix:
   include:
+<<<<<<< HEAD
 <<<<<<< Upstream, based on origin/master
     - os: linux
       dist: trusty
@@ -434,6 +435,147 @@ matrix:
     env:
     - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
 >>>>>>> 1f048f5 Scripted action - ghadmin.py tokenReEncryptAction
+=======
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc && CXX=g++"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-5
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-5 && CXX=g++-5"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-6
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-6 && CXX=g++-6"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-7
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - gcovr
+        - gperf
+        - g++-8
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=gcc-8 && CXX=g++-8"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - llvm-toolchain-trusty-5.0
+        packages:
+        - apache2
+        - build-essential
+        - clang-5.0
+        - gcovr
+        - gperf
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=clang-5.0 && CXX=clang++-5.0"
+  - os: linux
+    dist: trusty
+    addons:
+      apt:
+        sources:
+        - llvm-toolchain-trusty-6.0
+        - ubuntu-toolchain-r-test
+        packages:
+        - apache2
+        - build-essential
+        - clang-6.0
+        - gcovr
+        - gperf
+        - g++-4.9
+        - lcov
+        - libgd-dev
+        - php5
+        - php5-gd
+        - unzip
+        - valgrind
+    env:
+    - MATRIX_EVAL="CC=clang-6.0 && CXX=clang++-6.0"
+>>>>>>> branch 'GROUNDWORK-test13' of https://github.com/gwos/nagioscore.git
 before_install:
 - eval "${MATRIX_EVAL}"
 script:
