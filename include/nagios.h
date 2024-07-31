@@ -163,7 +163,6 @@ extern int translate_passive_host_checks;
 extern int passive_host_checks_are_soft;
 
 extern int status_update_interval;
-extern char *retention_file;
 
 extern int time_change_threshold;
 
