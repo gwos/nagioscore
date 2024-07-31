@@ -588,6 +588,8 @@ int main(int argc, char **argv) {
 			caught_signal = sigshutdown = FALSE;
 			sig_id = 0;
 
+			logit(NSLOG_PROCESS_INFO, TRUE, "_111_ reset internal book-keeping (in case we're restarting)\n");
+
 			/* reset program variables */
 			reset_variables();
 			timing_point("Variables reset\n");
@@ -663,6 +665,8 @@ int main(int argc, char **argv) {
 			/* open debug log now that we're the right user */
 			open_debug_log();
 
+			logit(NSLOG_PROCESS_INFO, TRUE, "_019_ open_debug_log() initialized\n");
+
 #ifdef USE_EVENT_BROKER
 			/* initialize modules */
 			neb_init_modules();
@@ -670,8 +674,12 @@ int main(int argc, char **argv) {
 #endif
 			timing_point("NEB module API initialized\n");
 
+			logit(NSLOG_PROCESS_INFO, TRUE, "_021_ NEB module API initialized\n");
+
 			/* handle signals (interrupts) before we do any socket I/O */
 			setup_sighandler();
+
+			logit(NSLOG_PROCESS_INFO, TRUE, "_023_ setup_sighandler() initialized\n");
 
 			/*
 			 * Initialize query handler and event subscription service.
@@ -683,6 +691,8 @@ int main(int argc, char **argv) {
 				exit(EXIT_FAILURE);
 			}
 			timing_point("Query handler initialized\n");
+
+			logit(NSLOG_PROCESS_INFO, TRUE, "_025_ Query handler initialized\n");
 
 #ifdef ENABLE_NERD
 			nerd_init();
@@ -722,6 +732,8 @@ int main(int argc, char **argv) {
 			timing_point("First callback made\n");
 #endif
 
+			logit(NSLOG_PROCESS_INFO, TRUE, "_030_ read in all object config data\n");
+
 			/* read in all object config data */
 			if(result == OK)
 				result = read_all_object_data(config_file);
@@ -736,6 +748,8 @@ int main(int argc, char **argv) {
 				if((result = pre_flight_check()) != OK)
 					logit(NSLOG_PROCESS_INFO | NSLOG_RUNTIME_ERROR | NSLOG_VERIFICATION_ERROR, TRUE, "Bailing out due to errors encountered while running the pre-flight check.  Run Nagios from the command line with the -v option to verify your config before restarting. (PID=%d)\n", (int)getpid());
 				}
+
+			logit(NSLOG_PROCESS_INFO, TRUE, "_031_ an error occurred that prevented us from (re)starting\n");
 
 			/* an error occurred that prevented us from (re)starting */
 			if(result != OK) {
@@ -754,6 +768,8 @@ int main(int argc, char **argv) {
 				cleanup();
 				exit(ERROR);
 				}
+
+			logit(NSLOG_PROCESS_INFO, TRUE, "_033_ Object configuration parsed and understood\n");
 
 			timing_point("Object configuration parsed and understood\n");
 			
@@ -823,6 +839,8 @@ int main(int argc, char **argv) {
 			log_service_states(INITIAL_STATES, NULL);
 			timing_point("Initial states logged\n");
 
+			logit(NSLOG_PROCESS_INFO, TRUE, "_050_ reset the restart flag\n");
+
 			/* reset the restart flag */
 			sigrestart = FALSE;
 
@@ -840,10 +858,14 @@ int main(int argc, char **argv) {
 			my_free(mac->x[MACRO_EVENTSTARTTIME]);
 			asprintf(&mac->x[MACRO_EVENTSTARTTIME], "%llu", (unsigned long long)event_start);
 
+			logit(NSLOG_PROCESS_INFO, TRUE, "_055_ Entering event execution loop\n");
+
 			timing_point("Entering event execution loop\n");
 			/***** start monitoring all services *****/
 			/* (doesn't return until a restart or shutdown signal is encountered) */
 			event_execution_loop();
+
+			logit(NSLOG_PROCESS_INFO, TRUE, "_059_ Exited event execution loop\n");
 
 			/*
 			 * immediately deinitialize the query handler so it
@@ -855,6 +877,8 @@ int main(int argc, char **argv) {
 			/* 03/21/2007 EG SIGSEGV signals are still logged in sighandler() so we don't lose them */
 			/* did we catch a signal? */
 			if(caught_signal == TRUE) {
+
+				logit(NSLOG_PROCESS_INFO, TRUE, "Caught SIG: %d\n", sig_id);
 
 				if(sig_id == SIGHUP)
 					logit(NSLOG_PROCESS_INFO, TRUE, "Caught SIGHUP, restarting...\n");
@@ -871,6 +895,8 @@ int main(int argc, char **argv) {
 #endif
 
 			/* save service and host state information */
+			logit(NSLOG_PROCESS_INFO, TRUE, "Calling save_state_information(FALSE)\n");
+
 			save_state_information(FALSE);
 			cleanup_retention_data();
 

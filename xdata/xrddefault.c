@@ -99,6 +99,7 @@ int xrddefault_save_state_information(void) {
 	unsigned long process_host_attribute_mask = 0L;
 	unsigned long process_service_attribute_mask = 0L;
 
+	logit(NSLOG_PROCESS_INFO, TRUE, "begin xrddefault_save_state_information() / '%s'\n", retention_file);
 
 	log_debug_info(DEBUGL_FUNCTIONS, 0, "xrddefault_save_state_information()\n");
 
@@ -411,6 +412,8 @@ int xrddefault_save_state_information(void) {
 
 		result = OK;
 
+		log_debug_info(DEBUGL_RETENTIONDATA, 2, "Moving the temp file to the retention file '%s' / '%s'\n", tmp_file, retention_file);
+
 		/* move the temp file to the retention file (overwrite the old retention file) */
 		if(my_rename(tmp_file, retention_file)) {
 			unlink(tmp_file);
@@ -431,6 +434,8 @@ int xrddefault_save_state_information(void) {
 
 	/* free memory */
 	my_free(tmp_file);
+
+	logit(NSLOG_PROCESS_INFO, TRUE, "end xrddefault_save_state_information() / '%s'\n", retention_file);
 
 	return result;
 	}

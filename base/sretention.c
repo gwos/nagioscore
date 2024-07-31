@@ -55,6 +55,8 @@ int cleanup_retention_data(void) {
 int save_state_information(int autosave) {
 	int result = OK;
 
+	logit(NSLOG_PROCESS_INFO, FALSE, "begin  save_state_information(%d)\n", autosave);
+
 	if(retain_state_information == FALSE)
 		return OK;
 
@@ -75,6 +77,10 @@ int save_state_information(int autosave) {
 
 	if(autosave == TRUE)
 		logit(NSLOG_PROCESS_INFO, FALSE, "Auto-save of retention data completed successfully.\n");
+	else
+		logit(NSLOG_PROCESS_INFO, FALSE, "Save of retention data completed successfully.\n");
+
+	logit(NSLOG_PROCESS_INFO, FALSE, "end  save_state_information(%d)\n", autosave);
 
 	return OK;
 	}

@@ -1678,6 +1678,9 @@ void setup_sighandler(void) {
 	struct sigaction sig_action;
 #endif
 
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "setup_sighandler() start HAVE_SIGACTION %d\n", HAVE_SIGACTION);
+	logit(NSLOG_PROCESS_INFO, TRUE, "setup_sighandler  HAVE_SIGACTION: %d\n", HAVE_SIGACTION);
+
 	/* reset the shutdown flag */
 	sigshutdown = FALSE;
 
@@ -1710,6 +1713,8 @@ void setup_sighandler(void) {
 	if(daemon_dumps_core == FALSE && daemon_mode == TRUE)
 		signal(SIGSEGV, sighandler);
 #endif /* HAVE_SIGACTION */
+
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "setup_sighandler() end HAVE_SIGACTION %d\n", HAVE_SIGACTION);
 
 	return;
 	}
@@ -1749,6 +1754,9 @@ void sighandler(int sig) {
 	const char *sigs[35] = {"EXIT", "HUP", "INT", "QUIT", "ILL", "TRAP", "ABRT", "BUS", "FPE", "KILL", "USR1", "SEGV", "USR2", "PIPE", "ALRM", "TERM", "STKFLT", "CHLD", "CONT", "STOP", "TSTP", "TTIN", "TTOU", "URG", "XCPU", "XFSZ", "VTALRM", "PROF", "WINCH", "IO", "PWR", "UNUSED", "ZERR", "DEBUG", (char *)NULL};
 	int x = 0;
 
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "sighandler(%d) start\n", sig);
+	logit(NSLOG_PROCESS_INFO, TRUE, "sighandler SIG: %d\n", sig);
+
 	/* if shutdown is already true, we're in a signal trap loop! */
 	/* changed 09/07/06 to only exit on segfaults */
 	if(sigshutdown == TRUE && sig == SIGSEGV)
@@ -1773,6 +1781,8 @@ void sighandler(int sig) {
 		logit(NSLOG_PROCESS_INFO, TRUE, "Caught SIG%s, shutting down...\n", sigs[sig]);
 		sigshutdown = TRUE;
 		}
+
+	log_debug_info(DEBUGL_FUNCTIONS, 0, "sighandler(%d) end\n", sig);
 
 	return;
 	}
